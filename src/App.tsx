@@ -63,6 +63,18 @@ type StructuredDraft = {
   supportingSolutionPaths: SolutionPathOption[]
 }
 
+type PatternPageProps = {
+  initiativeItems: Initiative[]
+}
+
+type PlaybookCard = {
+  title: string
+  whenToUse: string
+  recommendedFirstActions: RecommendedNextAction[]
+  typicalSolutionPaths: SolutionPathOption[]
+  commonRisks: string[]
+}
+
 const navItems: NavItem[] = [
   { key: 'home', label: 'Wayfinder', eyebrow: 'Command' },
   { key: 'initiatives', label: 'Initiatives', eyebrow: 'Portfolio' },
@@ -1304,6 +1316,247 @@ function IntakePage({ onAddInitiative }: IntakePageProps) {
   )
 }
 
+const countedPatternItems = (items: string[], limit = 6): CountItem[] =>
+  countBy(items)
+    .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label))
+    .slice(0, limit)
+
+const collectPatternLearning = (
+  initiativeItems: Initiative[],
+  selector: (initiative: Initiative) => string[],
+): CountItem[] =>
+  countedPatternItems(initiativeItems.flatMap((initiative) => selector(initiative)))
+
+function PatternCountList({ items }: { items: CountItem[] }) {
+  if (items.length === 0) {
+    return <p className="empty-inline">No patterns captured yet.</p>
+  }
+
+  return (
+    <div className="pattern-count-list">
+      {items.map((item) => (
+        <div className="pattern-count-row" key={item.label}>
+          <span>{item.label}</span>
+          <strong>{item.count}</strong>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function PatternsPage({ initiativeItems }: PatternPageProps) {
+  const patternGroups = [
+    {
+      title: 'Repeated Pain Patterns',
+      items: collectPatternLearning(
+        initiativeItems,
+        (initiative) => initiative.patternLearning.repeatedPainPatterns,
+      ),
+    },
+    {
+      title: 'Common Blockers',
+      items: collectPatternLearning(
+        initiativeItems,
+        (initiative) => initiative.patternLearning.commonBlockers,
+      ),
+    },
+    {
+      title: 'Data Readiness Issues',
+      items: collectPatternLearning(
+        initiativeItems,
+        (initiative) => initiative.patternLearning.dataReadinessIssues,
+      ),
+    },
+    {
+      title: 'Recurring Systems',
+      items: collectPatternLearning(
+        initiativeItems,
+        (initiative) => initiative.patternLearning.recurringSystems,
+      ),
+    },
+    {
+      title: 'Similar Initiatives',
+      items: collectPatternLearning(
+        initiativeItems,
+        (initiative) => initiative.patternLearning.similarInitiatives,
+      ),
+    },
+    {
+      title: 'Reusable Requirement Patterns',
+      items: collectPatternLearning(
+        initiativeItems,
+        (initiative) => initiative.patternLearning.reusableRequirementPatterns,
+      ),
+    },
+  ]
+
+  return (
+    <section className="patterns-page" aria-labelledby="patterns-page-title">
+      <div className="list-page-header">
+        <div>
+          <p className="eyebrow">Patterns</p>
+          <h3 id="patterns-page-title">Cross-initiative intelligence</h3>
+          <p>
+            Patterns show where problems repeat across the organization. This
+            helps identify where standard solutions or playbooks should exist.
+          </p>
+        </div>
+        <div className="list-page-count">
+          <span>{initiativeItems.length}</span>
+          <p>Initiatives analyzed</p>
+        </div>
+      </div>
+
+      <div className="patterns-page-grid">
+        {patternGroups.map((group) => (
+          <article className="patterns-page-card" key={group.title}>
+            <h4>{group.title}</h4>
+            <PatternCountList items={group.items} />
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+const includesAnyPattern = (initiativeItems: Initiative[], words: string[]): boolean =>
+  initiativeItems
+    .flatMap((initiative) => [
+      ...initiative.patternLearning.repeatedPainPatterns,
+      ...initiative.patternLearning.commonBlockers,
+      ...initiative.patternLearning.dataReadinessIssues,
+      ...initiative.patternLearning.reusableRequirementPatterns,
+    ])
+    .some((item) => words.some((word) => item.toLowerCase().includes(word)))
+
+const buildPlaybookCards = (initiativeItems: Initiative[]): PlaybookCard[] => {
+  const cards: PlaybookCard[] = []
+
+  if (includesAnyPattern(initiativeItems, ['visibility', 'status', 'report'])) {
+    cards.push({
+      title: 'Workflow Visibility Gaps',
+      whenToUse:
+        'Use when teams cannot see current status, blockers, owners, or upcoming operational obligations.',
+      recommendedFirstActions: ['Define Requirements', 'Create Reporting View'],
+      typicalSolutionPaths: ['Reporting / Visibility', 'Process Improvement'],
+      commonRisks: [
+        'Building a view before agreeing on required fields',
+        'Treating unclear ownership as a reporting-only issue',
+      ],
+    })
+  }
+
+  if (includesAnyPattern(initiativeItems, ['handoff', 'transition', 'owner'])) {
+    cards.push({
+      title: 'Handoff and Ownership Breakdowns',
+      whenToUse:
+        'Use when work crosses teams and accountability, acceptance criteria, or backup ownership is unclear.',
+      recommendedFirstActions: ['Map Workflow', 'Run Discovery'],
+      typicalSolutionPaths: ['Process Improvement', 'Knowledge / Memory Layer'],
+      commonRisks: [
+        'Automating unclear handoffs',
+        'Skipping the receiving team perspective',
+      ],
+    })
+  }
+
+  if (includesAnyPattern(initiativeItems, ['data', 'source', 'field', 'naming'])) {
+    cards.push({
+      title: 'Data Readiness First',
+      whenToUse:
+        'Use when source fields, status definitions, naming, or data ownership are not trusted enough for action.',
+      recommendedFirstActions: ['Validate Data', 'Define Requirements'],
+      typicalSolutionPaths: ['Reporting / Visibility', 'Workflow Automation'],
+      commonRisks: [
+        'Designing automation around unreliable inputs',
+        'Using inconsistent status language across teams',
+      ],
+    })
+  }
+
+  if (includesAnyPattern(initiativeItems, ['idea', 'intake', 'context'])) {
+    cards.push({
+      title: 'Structured Idea Intake',
+      whenToUse:
+        'Use when raw ideas, AI opportunities, or lightweight tool requests are arriving without a consistent review path.',
+      recommendedFirstActions: ['Run Discovery', 'Build Prototype'],
+      typicalSolutionPaths: ['Knowledge / Memory Layer', 'Lightweight Prototype'],
+      commonRisks: [
+        'Letting informal ideas become ungoverned pilots',
+        'Capturing submissions without a routing owner',
+      ],
+    })
+  }
+
+  return cards.length > 0
+    ? cards
+    : [
+        {
+          title: 'Discovery Before Solution Commitment',
+          whenToUse:
+            'Use when a raw operational signal needs shaping before choosing a solution path.',
+          recommendedFirstActions: ['Run Discovery', 'Map Workflow'],
+          typicalSolutionPaths: ['Process Improvement', 'Knowledge / Memory Layer'],
+          commonRisks: [
+            'Treating a signal as a complete requirement',
+            'Committing to a build path before ownership is clear',
+          ],
+        },
+      ]
+}
+
+function PlaybookPage({ initiativeItems }: PatternPageProps) {
+  const playbookCards = buildPlaybookCards(initiativeItems)
+
+  return (
+    <section className="playbook-page" aria-labelledby="playbook-page-title">
+      <div className="list-page-header">
+        <div>
+          <p className="eyebrow">Playbook</p>
+          <h3 id="playbook-page-title">Reusable action guidance</h3>
+          <p>
+            Playbooks provide repeatable approaches to common operational
+            problems.
+          </p>
+        </div>
+        <div className="list-page-count">
+          <span>{playbookCards.length}</span>
+          <p>Playbooks available</p>
+        </div>
+      </div>
+
+      <div className="playbook-grid">
+        {playbookCards.map((card) => (
+          <article className="playbook-card" key={card.title}>
+            <h4>{card.title}</h4>
+            <p>{card.whenToUse}</p>
+            <div className="playbook-card-section">
+              <strong>Recommended first actions</strong>
+              <div className="data-chip-row">
+                {card.recommendedFirstActions.map((action) => (
+                  <span key={action}>{action}</span>
+                ))}
+              </div>
+            </div>
+            <div className="playbook-card-section">
+              <strong>Typical solution paths</strong>
+              <div className="data-chip-row">
+                {card.typicalSolutionPaths.map((path) => (
+                  <span key={path}>{path}</span>
+                ))}
+              </div>
+            </div>
+            <div className="playbook-card-section">
+              <strong>Common risks</strong>
+              <SimpleList items={card.commonRisks} />
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
 function PlaceholderSection({ activeSection }: { activeSection: SectionKey }) {
   const activeContent = sectionContent[activeSection]
   const previewInitiatives = initiatives.slice(0, 3)
@@ -1452,6 +1705,10 @@ function App() {
               ])
             }
           />
+        ) : activeSection === 'patterns' ? (
+          <PatternsPage initiativeItems={initiativeItems} />
+        ) : activeSection === 'playbook' ? (
+          <PlaybookPage initiativeItems={initiativeItems} />
         ) : (
           <PlaceholderSection activeSection={activeSection} />
         )}

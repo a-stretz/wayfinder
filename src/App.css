@@ -966,6 +966,101 @@
   font-weight: 800;
 }
 
+.patterns-page,
+.playbook-page {
+  display: grid;
+  gap: 18px;
+}
+
+.patterns-page-grid,
+.playbook-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.patterns-page-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.patterns-page-card,
+.playbook-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.patterns-page-card {
+  padding: 20px;
+}
+
+.patterns-page-card h4,
+.playbook-card h4 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 1.05rem;
+}
+
+.pattern-count-list {
+  display: grid;
+  gap: 9px;
+  margin-top: 16px;
+}
+
+.pattern-count-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fbfbfd;
+}
+
+.pattern-count-row span {
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.pattern-count-row strong {
+  min-width: 30px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--nav);
+  color: #fff;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.playbook-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.playbook-card {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+}
+
+.playbook-card > p {
+  margin: 0;
+  color: var(--text);
+}
+
+.playbook-card-section {
+  display: grid;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.playbook-card-section > strong {
+  color: var(--nav);
+  font-size: 0.86rem;
+}
+
 .initiative-detail-page {
   display: grid;
   gap: 18px;
@@ -1491,6 +1586,8 @@
   .initiative-row-meta,
   .intake-workspace,
   .draft-output-grid,
+  .patterns-page-grid,
+  .playbook-grid,
   .initiative-detail-header,
   .signal-detail-grid,
   .solution-map-grid,
