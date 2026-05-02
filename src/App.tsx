@@ -403,6 +403,88 @@ function DetailSection({
   )
 }
 
+function DecisionLensSection({ initiative }: { initiative: Initiative }) {
+  const [selectedLens, setSelectedLens] = useState<string | null>(null)
+  const selectedBehavior =
+    initiative.decisionLensBehaviors.find(
+      (behavior) => behavior.lens === selectedLens,
+    ) ?? null
+
+  return (
+    <DetailSection eyebrow="Decision lens" title="Lens behavior">
+      <div className="lens-chip-row" role="list" aria-label="Decision lenses">
+        {decisionLensPresets.map((lens) => {
+          const hasBehavior = initiative.decisionLensBehaviors.some(
+            (behavior) => behavior.lens === lens,
+          )
+
+          return (
+            <button
+              className={selectedLens === lens ? 'lens-chip selected' : 'lens-chip'}
+              disabled={!hasBehavior}
+              key={lens}
+              onClick={() => setSelectedLens(lens)}
+              type="button"
+            >
+              {lens}
+            </button>
+          )
+        })}
+      </div>
+
+      {selectedBehavior ? (
+        <article className="lens-behavior-card selected-behavior">
+          <div className="lens-behavior-header">
+            <div>
+              <span>Lens applied</span>
+              <h4>{selectedBehavior.lens}</h4>
+            </div>
+            <strong>
+              Recommendation changed:{' '}
+              {selectedBehavior.recommendationChanged ? 'Yes' : 'No'}
+            </strong>
+          </div>
+
+          {!selectedBehavior.recommendationChanged ? (
+            <p className="lens-stability-note">
+              The recommendation stays the same; this lens shifts emphasis within
+              the current direction.
+            </p>
+          ) : null}
+
+          <div className="selected-next-action">
+            <span>Current recommended next action</span>
+            <strong>{selectedBehavior.currentRecommendedNextAction}</strong>
+          </div>
+
+          <div className="lens-detail-grid">
+            <div>
+              <strong>Emphasis changes</strong>
+              <SimpleList items={selectedBehavior.emphasisChanges} />
+            </div>
+            <div>
+              <strong>Paths affected</strong>
+              <SimpleList items={[...selectedBehavior.pathsAffected]} />
+            </div>
+            <div>
+              <strong>New questions to ask</strong>
+              <SimpleList items={selectedBehavior.newQuestionsToAsk} />
+            </div>
+            <div>
+              <strong>Future direction</strong>
+              <p>{selectedBehavior.futureDirection}</p>
+            </div>
+          </div>
+        </article>
+      ) : (
+        <div className="lens-empty-state">
+          <p>Select a decision lens to see how it changes emphasis.</p>
+        </div>
+      )}
+    </DetailSection>
+  )
+}
+
 function InitiativeDetailPage({
   initiative,
   onBack,
@@ -484,43 +566,7 @@ function InitiativeDetailPage({
         </div>
       </DetailSection>
 
-      <DetailSection eyebrow="Decision lens" title="Lens behavior">
-        <div className="lens-chip-row">
-          {decisionLensPresets.map((lens) => (
-            <span key={lens}>{lens}</span>
-          ))}
-        </div>
-        <div className="lens-behavior-list">
-          {initiative.decisionLensBehaviors.map((behavior) => (
-            <article className="lens-behavior-card" key={behavior.lens}>
-              <div className="lens-behavior-header">
-                <h4>{behavior.lens}</h4>
-                <span>
-                  Recommendation changed: {behavior.recommendationChanged ? 'Yes' : 'No'}
-                </span>
-              </div>
-              <div className="lens-detail-grid">
-                <div>
-                  <strong>Emphasis changes</strong>
-                  <SimpleList items={behavior.emphasisChanges} />
-                </div>
-                <div>
-                  <strong>Paths affected</strong>
-                  <SimpleList items={[...behavior.pathsAffected]} />
-                </div>
-                <div>
-                  <strong>New questions</strong>
-                  <SimpleList items={behavior.newQuestionsToAsk} />
-                </div>
-                <div>
-                  <strong>Future direction</strong>
-                  <p>{behavior.futureDirection}</p>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      </DetailSection>
+      <DecisionLensSection initiative={initiative} />
 
       <DetailSection eyebrow="Candidate requirements map" title="Requirement categories">
         <div className="requirements-grid">
