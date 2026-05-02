@@ -6,6 +6,8 @@ import {
   requirementCategories,
   solutionPathOptions,
   wayfinderDataSummary,
+  type Department,
+  type Initiative,
 } from './data/wayfinderData'
 import './App.css'
 
@@ -25,6 +27,18 @@ type SectionContent = {
   points: string[]
 }
 
+type CountItem<T extends string = string> = {
+  label: T
+  count: number
+}
+
+type RecentSignal = {
+  id: string
+  summary: string
+  initiativeTitle: string
+  department: Department
+}
+
 const navItems: NavItem[] = [
   { key: 'home', label: 'Wayfinder', eyebrow: 'Command' },
   { key: 'initiatives', label: 'Initiatives', eyebrow: 'Portfolio' },
@@ -37,9 +51,9 @@ const sectionContent: Record<SectionKey, SectionContent> = {
   home: {
     title: 'Wayfinder Home',
     summary:
-      'A strategic workspace for turning scattered operational signals into solution paths, candidate requirements, and practical next actions.',
+      'A strategic control surface for what needs attention, what actions are recommended, and where operational friction is building.',
     stat: String(wayfinderDataSummary.initiativeCount),
-    statLabel: 'mock initiatives',
+    statLabel: 'active mock initiatives',
     points: [
       'Surface cross-functional signals without treating them as generic tasks.',
       'Keep solution mapping and recommendation at the center of the workflow.',
@@ -96,10 +110,288 @@ const sectionContent: Record<SectionKey, SectionContent> = {
   },
 }
 
-function App() {
-  const [activeSection, setActiveSection] = useState<SectionKey>('home')
+const countBy = <T extends string>(
+  values: T[],
+  preferredOrder?: readonly T[],
+): CountItem<T>[] => {
+  const countMap = values.reduce<Map<T, number>>(
+    (map, value) => map.set(value, (map.get(value) ?? 0) + 1),
+    new Map<T, number>(),
+  )
+
+  const orderedLabels = preferredOrder
+    ? preferredOrder.filter((label) => countMap.has(label))
+    : Array.from(countMap.keys())
+
+  return orderedLabels.map((label) => ({
+    label,
+    count: countMap.get(label) ?? 0,
+  }))
+}
+
+const topPatternItems = (items: string[], limit = 4): string[] =>
+  countBy(items)
+    .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label))
+    .slice(0, limit)
+    .map((item) => item.label)
+
+const shorten = (text: string, maxLength = 132): string =>
+  text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text
+
+const priorityInitiatives = initiatives.slice(0, 3)
+
+const departmentBreakdown = countBy(
+  initiatives.map((initiative) => initiative.department),
+).sort((left, right) => left.label.localeCompare(right.label))
+
+const solutionPathBreakdown = countBy(
+  initiatives.map((initiative) => initiative.primarySolutionPath),
+  solutionPathOptions,
+)
+
+const nextActionBreakdown = countBy(
+  initiatives.map((initiative) => initiative.recommendedNextAction),
+  recommendedNextActions,
+)
+
+const emergingPatterns = {
+  repeatedPainPatterns: topPatternItems(
+    initiatives.flatMap((initiative) => initiative.patternLearning.repeatedPainPatterns),
+  ),
+  commonBlockers: topPatternItems(
+    initiatives.flatMap((initiative) => initiative.patternLearning.commonBlockers),
+  ),
+  dataReadinessIssues: topPatternItems(
+    initiatives.flatMap((initiative) => initiative.patternLearning.dataReadinessIssues),
+  ),
+}
+
+const recentSignals: RecentSignal[] = initiatives
+  .flatMap((initiative) =>
+    initiative.rawSignals.map((signal) => ({
+      id: signal.id,
+      summary: signal.summary,
+      initiativeTitle: initiative.title,
+      department: initiative.department,
+    })),
+  )
+  .slice(0, 6)
+
+function PriorityRecommendations() {
+  return (
+    <section className="home-section priority-section" aria-labelledby="priority-title">
+      <div className="section-heading">
+        <p className="eyebrow">Priority recommendations</p>
+        <h3 id="priority-title">Needs attention now</h3>
+      </div>
+
+      <div className="priority-list">
+        {priorityInitiatives.map((initiative: Initiative) => (
+          <article className="priority-card" key={initiative.id}>
+            <div className="priority-card-header">
+              <span>{initiative.department}</span>
+              <strong>{initiative.recommendedNextAction}</strong>
+            </div>
+            <h4>{initiative.title}</h4>
+            <p>{shorten(initiative.problemSummary)}</p>
+            <div className="path-pill">{initiative.primarySolutionPath}</div>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function CountList<T extends string>({
+  items,
+  label,
+}: {
+  items: CountItem<T>[]
+  label: string
+}) {
+  return (
+    <div className="count-list" aria-label={label}>
+      {items.map((item) => (
+        <div className="count-row" key={item.label}>
+          <span>{item.label}</span>
+          <strong>{item.count}</strong>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function InitiativeOverview() {
+  return (
+    <section className="home-section overview-section" aria-labelledby="overview-title">
+      <div className="section-heading">
+        <p className="eyebrow">Initiative overview</p>
+        <h3 id="overview-title">Portfolio shape</h3>
+      </div>
+
+      <div className="overview-metric">
+        <span>{wayfinderDataSummary.initiativeCount}</span>
+        <p>Total initiatives</p>
+      </div>
+
+      <div className="overview-columns">
+        <div>
+          <h4>By department</h4>
+          <CountList items={departmentBreakdown} label="Initiatives by department" />
+        </div>
+        <div>
+          <h4>By primary solution path</h4>
+          <CountList items={solutionPathBreakdown} label="Initiatives by primary solution path" />
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function EmergingPatterns() {
+  const patternGroups = [
+    { title: 'Repeated pain patterns', items: emergingPatterns.repeatedPainPatterns },
+    { title: 'Common blockers', items: emergingPatterns.commonBlockers },
+    { title: 'Data readiness issues', items: emergingPatterns.dataReadinessIssues },
+  ]
+
+  return (
+    <section className="home-section patterns-section" aria-labelledby="patterns-title">
+      <div className="section-heading">
+        <p className="eyebrow">Emerging patterns</p>
+        <h3 id="patterns-title">Friction themes</h3>
+      </div>
+
+      <div className="pattern-grid">
+        {patternGroups.map((group) => (
+          <article className="pattern-card" key={group.title}>
+            <h4>{group.title}</h4>
+            <ul>
+              {group.items.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function RecentSignals() {
+  return (
+    <section className="home-section signals-section" aria-labelledby="signals-title">
+      <div className="section-heading">
+        <p className="eyebrow">Recent signals</p>
+        <h3 id="signals-title">Operational inputs</h3>
+      </div>
+
+      <div className="signal-list">
+        {recentSignals.map((signal) => (
+          <article className="signal-row" key={signal.id}>
+            <p>{signal.summary}</p>
+            <span>
+              {signal.initiativeTitle} / {signal.department}
+            </span>
+          </article>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function NextActionsSummary() {
+  return (
+    <section className="home-section next-actions-section" aria-labelledby="actions-title">
+      <div className="section-heading">
+        <p className="eyebrow">Recommended next actions</p>
+        <h3 id="actions-title">Action mix</h3>
+      </div>
+
+      <CountList items={nextActionBreakdown} label="Initiatives by recommended next action" />
+    </section>
+  )
+}
+
+function WayfinderHome() {
+  return (
+    <section className="home-dashboard" aria-label="Wayfinder Home dashboard">
+      <PriorityRecommendations />
+      <InitiativeOverview />
+      <EmergingPatterns />
+      <RecentSignals />
+      <NextActionsSummary />
+    </section>
+  )
+}
+
+function PlaceholderSection({ activeSection }: { activeSection: SectionKey }) {
   const activeContent = sectionContent[activeSection]
   const previewInitiatives = initiatives.slice(0, 3)
+
+  return (
+    <section className="content-grid" aria-live="polite">
+      <article className="feature-panel">
+        <div className="panel-heading">
+          <p className="eyebrow">
+            {navItems.find((item) => item.key === activeSection)?.eyebrow}
+          </p>
+          <h3>{activeContent.title}</h3>
+        </div>
+        <p>{activeContent.summary}</p>
+
+        <div className="solution-strip">
+          <span>{wayfinderDataSummary.rawSignalCount} operational signals</span>
+          <span>{solutionPathOptions.length} solution paths</span>
+          <span>{recommendedNextActions.length} next actions</span>
+        </div>
+      </article>
+
+      <aside className="metric-panel">
+        <span>{activeContent.stat}</span>
+        <p>{activeContent.statLabel}</p>
+      </aside>
+
+      <article className="detail-panel">
+        <h3>Data Foundation</h3>
+        <ul>
+          {activeContent.points.map((point) => (
+            <li key={point}>{point}</li>
+          ))}
+        </ul>
+      </article>
+
+      <article className="recommendation-panel">
+        <p className="eyebrow">Mock initiative preview</p>
+        <h3>Local dataset loaded</h3>
+        <p>
+          The shell is lightly connected to typed mock data for later portfolio and
+          initiative pages.
+        </p>
+        <div className="initiative-preview-list">
+          {previewInitiatives.map((initiative) => (
+            <article className="initiative-preview" key={initiative.id}>
+              <div>
+                <strong>{initiative.title}</strong>
+                <span>{initiative.department}</span>
+              </div>
+              <p>
+                {initiative.primarySolutionPath} to {initiative.recommendedNextAction}
+              </p>
+            </article>
+          ))}
+        </div>
+        <div className="data-chip-row" aria-label="Dataset reference counts">
+          <span>{requirementCategories.length} requirement categories</span>
+          <span>{decisionLensPresets.length} decision lenses</span>
+        </div>
+      </article>
+    </section>
+  )
+}
+
+function App() {
+  const [activeSection, setActiveSection] = useState<SectionKey>('home')
 
   return (
     <div className="app-shell">
@@ -150,61 +442,11 @@ function App() {
           </div>
         </header>
 
-        <section className="content-grid" aria-live="polite">
-          <article className="feature-panel">
-            <div className="panel-heading">
-              <p className="eyebrow">{navItems.find((item) => item.key === activeSection)?.eyebrow}</p>
-              <h3>{activeContent.title}</h3>
-            </div>
-            <p>{activeContent.summary}</p>
-
-            <div className="solution-strip">
-              <span>{wayfinderDataSummary.rawSignalCount} operational signals</span>
-              <span>{solutionPathOptions.length} solution paths</span>
-              <span>{recommendedNextActions.length} next actions</span>
-            </div>
-          </article>
-
-          <aside className="metric-panel">
-            <span>{activeContent.stat}</span>
-            <p>{activeContent.statLabel}</p>
-          </aside>
-
-          <article className="detail-panel">
-            <h3>Data Foundation</h3>
-            <ul>
-              {activeContent.points.map((point) => (
-                <li key={point}>{point}</li>
-              ))}
-            </ul>
-          </article>
-
-          <article className="recommendation-panel">
-            <p className="eyebrow">Mock initiative preview</p>
-            <h3>Local dataset loaded</h3>
-            <p>
-              The shell is lightly connected to typed mock data for later portfolio
-              and initiative pages.
-            </p>
-            <div className="initiative-preview-list">
-              {previewInitiatives.map((initiative) => (
-                <article className="initiative-preview" key={initiative.id}>
-                  <div>
-                    <strong>{initiative.title}</strong>
-                    <span>{initiative.department}</span>
-                  </div>
-                  <p>
-                    {initiative.primarySolutionPath} to {initiative.recommendedNextAction}
-                  </p>
-                </article>
-              ))}
-            </div>
-            <div className="data-chip-row" aria-label="Dataset reference counts">
-              <span>{requirementCategories.length} requirement categories</span>
-              <span>{decisionLensPresets.length} decision lenses</span>
-            </div>
-          </article>
-        </section>
+        {activeSection === 'home' ? (
+          <WayfinderHome />
+        ) : (
+          <PlaceholderSection activeSection={activeSection} />
+        )}
       </main>
     </div>
   )

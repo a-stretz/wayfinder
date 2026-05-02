@@ -316,6 +316,255 @@
   border-top: 4px solid var(--accent);
 }
 
+.home-dashboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.75fr);
+  gap: 18px;
+}
+
+.home-section {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.section-heading {
+  display: grid;
+  gap: 8px;
+}
+
+.section-heading h3 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 1.4rem;
+  line-height: 1.12;
+}
+
+.section-heading + * {
+  margin-top: 22px;
+}
+
+.priority-section {
+  grid-column: 1 / -1;
+  padding: 28px;
+}
+
+.priority-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.priority-card {
+  min-height: 260px;
+  padding: 18px;
+  border: 1px solid rgba(10, 16, 69, 0.12);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(238, 137, 34, 0.1), rgba(238, 137, 34, 0)),
+    #fbfbfd;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.priority-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.priority-card-header span,
+.path-pill,
+.signal-row span {
+  color: var(--text);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.priority-card-header strong {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--nav);
+  color: #fff;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.priority-card h4 {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 1.13rem;
+  line-height: 1.18;
+}
+
+.priority-card p {
+  margin: 0;
+  color: var(--text);
+  font-size: 0.92rem;
+}
+
+.path-pill {
+  width: fit-content;
+  margin-top: auto;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(115, 147, 126, 0.16);
+  color: var(--nav);
+}
+
+.overview-section,
+.patterns-section,
+.signals-section,
+.next-actions-section {
+  padding: 24px;
+}
+
+.overview-metric {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.overview-metric span {
+  color: var(--accent);
+  font-size: 4rem;
+  font-weight: 850;
+  line-height: 0.82;
+}
+
+.overview-metric p {
+  margin: 0 0 4px;
+  color: var(--text-strong);
+  font-weight: 800;
+}
+
+.overview-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 22px;
+}
+
+.overview-columns h4,
+.pattern-card h4 {
+  margin: 0 0 12px;
+  color: var(--text-strong);
+  font-size: 0.95rem;
+}
+
+.count-list {
+  display: grid;
+  gap: 8px;
+}
+
+.count-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fbfbfd;
+}
+
+.count-row span {
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.count-row strong {
+  min-width: 28px;
+  color: var(--nav);
+  text-align: right;
+}
+
+.pattern-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.pattern-card {
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fbfbfd;
+}
+
+.pattern-card ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.pattern-card li {
+  position: relative;
+  padding-left: 18px;
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.pattern-card li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.signals-section {
+  grid-column: 1;
+}
+
+.signal-list {
+  display: grid;
+  gap: 10px;
+}
+
+.signal-row {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.signal-row:first-child {
+  padding-top: 0;
+}
+
+.signal-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.signal-row p {
+  margin: 0 0 6px;
+  color: var(--text-strong);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.signal-row span {
+  display: block;
+  color: var(--support-plum);
+}
+
+.next-actions-section {
+  align-self: start;
+}
+
 .initiative-preview-list {
   display: grid;
   gap: 10px;
@@ -396,8 +645,16 @@
   }
 
   .workspace-header,
-  .content-grid {
+  .content-grid,
+  .home-dashboard,
+  .priority-list,
+  .overview-columns {
     grid-template-columns: 1fr;
+  }
+
+  .priority-section,
+  .signals-section {
+    grid-column: auto;
   }
 
   .workspace-header {
