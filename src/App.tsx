@@ -1,4 +1,12 @@
 import { useState } from 'react'
+import {
+  decisionLensPresets,
+  initiatives,
+  recommendedNextActions,
+  requirementCategories,
+  solutionPathOptions,
+  wayfinderDataSummary,
+} from './data/wayfinderData'
 import './App.css'
 
 type SectionKey = 'home' | 'initiatives' | 'intake' | 'patterns' | 'playbook'
@@ -30,8 +38,8 @@ const sectionContent: Record<SectionKey, SectionContent> = {
     title: 'Wayfinder Home',
     summary:
       'A strategic workspace for turning scattered operational signals into solution paths, candidate requirements, and practical next actions.',
-    stat: '5',
-    statLabel: 'shell areas ready',
+    stat: String(wayfinderDataSummary.initiativeCount),
+    statLabel: 'mock initiatives',
     points: [
       'Surface cross-functional signals without treating them as generic tasks.',
       'Keep solution mapping and recommendation at the center of the workflow.',
@@ -41,12 +49,12 @@ const sectionContent: Record<SectionKey, SectionContent> = {
   initiatives: {
     title: 'Initiatives',
     summary:
-      'A future portfolio view for structured initiatives, mapped solution options, and recommendation status.',
-    stat: '0',
+      'A typed local dataset now anchors structured initiatives, mapped solution options, and recommendation status.',
+    stat: String(wayfinderDataSummary.initiativeCount),
     statLabel: 'sample records',
     points: [
-      'Placeholder only; no initiative data model has been introduced.',
-      'Reserved for future triage, mapping, and recommendation views.',
+      'Each initiative includes signals, target state, future scope, and pattern learning.',
+      'Solution paths use qualitative fit labels instead of numeric scoring.',
       'Designed as a dashboard surface rather than a generic project list.',
     ],
   },
@@ -54,8 +62,8 @@ const sectionContent: Record<SectionKey, SectionContent> = {
     title: 'Intake',
     summary:
       'A future signal capture space for operational inputs, constraints, risks, and decision prompts.',
-    stat: '3',
-    statLabel: 'signal themes',
+    stat: String(wayfinderDataSummary.rawSignalCount),
+    statLabel: 'raw signals',
     points: [
       'Collect operational signals before they become formal initiatives.',
       'Frame incoming context around friction, opportunity, and urgency.',
@@ -66,8 +74,8 @@ const sectionContent: Record<SectionKey, SectionContent> = {
     title: 'Patterns',
     summary:
       'A future intelligence layer for recurring operational patterns and reusable solution cues.',
-    stat: '4',
-    statLabel: 'pattern lanes',
+    stat: String(wayfinderDataSummary.solutionPathCount),
+    statLabel: 'solution paths',
     points: [
       'Spot repeated constraints across teams and workflows.',
       'Connect similar signals to known recommendation patterns.',
@@ -78,8 +86,8 @@ const sectionContent: Record<SectionKey, SectionContent> = {
     title: 'Playbook',
     summary:
       'A future guide surface for operating principles, recommendation criteria, and next-action templates.',
-    stat: '6',
-    statLabel: 'guide slots',
+    stat: String(wayfinderDataSummary.decisionLensCount),
+    statLabel: 'decision lenses',
     points: [
       'Keep solution mapping consistent across strategy work.',
       'Make recommendation logic visible and reusable.',
@@ -91,6 +99,7 @@ const sectionContent: Record<SectionKey, SectionContent> = {
 function App() {
   const [activeSection, setActiveSection] = useState<SectionKey>('home')
   const activeContent = sectionContent[activeSection]
+  const previewInitiatives = initiatives.slice(0, 3)
 
   return (
     <div className="app-shell">
@@ -121,7 +130,7 @@ function App() {
 
         <div className="sidebar-note">
           <span className="note-dot" aria-hidden="true" />
-          <p>Pass 1 shell only. Product data and integrations come later.</p>
+          <p>Local mock data only. Product screens and integrations come later.</p>
         </div>
       </aside>
 
@@ -150,9 +159,9 @@ function App() {
             <p>{activeContent.summary}</p>
 
             <div className="solution-strip">
-              <span>Operational signals</span>
-              <span>Solution paths</span>
-              <span>Next actions</span>
+              <span>{wayfinderDataSummary.rawSignalCount} operational signals</span>
+              <span>{solutionPathOptions.length} solution paths</span>
+              <span>{recommendedNextActions.length} next actions</span>
             </div>
           </article>
 
@@ -162,7 +171,7 @@ function App() {
           </aside>
 
           <article className="detail-panel">
-            <h3>Placeholder Scope</h3>
+            <h3>Data Foundation</h3>
             <ul>
               {activeContent.points.map((point) => (
                 <li key={point}>{point}</li>
@@ -171,13 +180,29 @@ function App() {
           </article>
 
           <article className="recommendation-panel">
-            <p className="eyebrow">Recommendation layer</p>
-            <h3>Reserved for future passes</h3>
+            <p className="eyebrow">Mock initiative preview</p>
+            <h3>Local dataset loaded</h3>
             <p>
-              This space will eventually carry recommendation logic, candidate
-              requirements, and practical action framing. For now, it confirms the
-              shell hierarchy and theme direction.
+              The shell is lightly connected to typed mock data for later portfolio
+              and initiative pages.
             </p>
+            <div className="initiative-preview-list">
+              {previewInitiatives.map((initiative) => (
+                <article className="initiative-preview" key={initiative.id}>
+                  <div>
+                    <strong>{initiative.title}</strong>
+                    <span>{initiative.department}</span>
+                  </div>
+                  <p>
+                    {initiative.primarySolutionPath} to {initiative.recommendedNextAction}
+                  </p>
+                </article>
+              ))}
+            </div>
+            <div className="data-chip-row" aria-label="Dataset reference counts">
+              <span>{requirementCategories.length} requirement categories</span>
+              <span>{decisionLensPresets.length} decision lenses</span>
+            </div>
           </article>
         </section>
       </main>
