@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import {
   decisionLensPresets,
   departments,
@@ -43,6 +43,12 @@ type RecentSignal = {
 }
 
 type FilterValue<T extends string> = T | 'All'
+
+type InitiativeSelectionProps = {
+  selectedInitiative: Initiative | null
+  onSelectInitiative: (initiative: Initiative) => void
+  onBackToInitiatives: () => void
+}
 
 const navItems: NavItem[] = [
   { key: 'home', label: 'Wayfinder', eyebrow: 'Command' },
@@ -330,7 +336,313 @@ function WayfinderHome() {
   )
 }
 
-function InitiativesPage() {
+const requirementHeading = (category: string): string =>
+  category
+    .replace(' Requirements', '')
+    .replace('AI / Automation', 'AI / Automation')
+
+function SimpleList({ items }: { items: string[] }) {
+  if (items.length === 0) {
+    return <p className="empty-inline">No items captured in the current dataset.</p>
+  }
+
+  return (
+    <ul className="detail-list">
+      {items.map((item) => (
+        <li key={item}>{item}</li>
+      ))}
+    </ul>
+  )
+}
+
+function RequirementGroup({
+  title,
+  requirements,
+}: {
+  title: string
+  requirements: Initiative['candidateRequirementsMap'][keyof Initiative['candidateRequirementsMap']]
+}) {
+  return (
+    <article className="requirement-group">
+      <h4>{requirementHeading(title)}</h4>
+      {requirements.length > 0 ? (
+        <div className="requirement-items">
+          {requirements.map((requirement) => (
+            <div className="requirement-item" key={requirement.id}>
+              <strong>{requirement.requirement}</strong>
+              <p>{requirement.rationale}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="empty-inline">No requirements captured for this category.</p>
+      )}
+    </article>
+  )
+}
+
+function DetailSection({
+  children,
+  eyebrow,
+  title,
+  className = '',
+}: {
+  children: ReactNode
+  eyebrow: string
+  title: string
+  className?: string
+}) {
+  return (
+    <section className={`initiative-detail-section ${className}`} aria-labelledby={`${title.replaceAll(/\s+/g, '-').toLowerCase()}-title`}>
+      <div className="section-heading">
+        <p className="eyebrow">{eyebrow}</p>
+        <h3 id={`${title.replaceAll(/\s+/g, '-').toLowerCase()}-title`}>{title}</h3>
+      </div>
+      {children}
+    </section>
+  )
+}
+
+function InitiativeDetailPage({
+  initiative,
+  onBack,
+}: {
+  initiative: Initiative
+  onBack: () => void
+}) {
+  const primaryRationale =
+    initiative.solutionPaths.find((path) => path.path === initiative.primarySolutionPath)
+      ?.rationale ?? initiative.scopingAnalysis
+  const notRecommendedYet = initiative.solutionPaths.filter(
+    (path) => path.fit === 'Later' || path.fit === 'Poor',
+  )
+  const requirementPathEntries = Object.entries(initiative.requirementsBySolutionPath)
+
+  return (
+    <section className="initiative-detail-page" aria-labelledby="detail-title">
+      <button className="back-button" onClick={onBack} type="button">
+        Back to Initiatives
+      </button>
+
+      <header className="initiative-detail-header">
+        <div>
+          <p className="eyebrow">Initiative header</p>
+          <h3 id="detail-title">{initiative.title}</h3>
+          <p>{initiative.problemSummary}</p>
+        </div>
+        <span>{initiative.department}</span>
+      </header>
+
+      <DetailSection eyebrow="Context summary" title="Situation">
+        <p className="detail-copy">{initiative.contextSummary}</p>
+      </DetailSection>
+
+      <DetailSection eyebrow="Inputs and signals" title="Raw inputs">
+        <div className="signal-detail-grid">
+          {initiative.rawSignals.map((signal) => (
+            <article className="signal-detail-card" key={signal.id}>
+              <div>
+                <span>{signal.source}</span>
+                <small>{signal.id}</small>
+              </div>
+              <p>{signal.summary}</p>
+              <strong>{signal.observedImpact}</strong>
+            </article>
+          ))}
+        </div>
+      </DetailSection>
+
+      <DetailSection eyebrow="Scoping analysis" title="Shape of the work">
+        <p className="detail-copy">{initiative.scopingAnalysis}</p>
+      </DetailSection>
+
+      <DetailSection eyebrow="Waypoint" title="Recommendation" className="waypoint-section">
+        <div className="waypoint-grid">
+          <div>
+            <span>Recommended next action</span>
+            <strong>{initiative.recommendedNextAction}</strong>
+          </div>
+          <div>
+            <span>Primary solution path</span>
+            <strong>{initiative.primarySolutionPath}</strong>
+          </div>
+        </div>
+        <p>{primaryRationale}</p>
+      </DetailSection>
+
+      <DetailSection eyebrow="Solution map" title="Path options">
+        <div className="solution-map-grid">
+          {initiative.solutionPaths.map((path) => (
+            <article className="solution-map-card" key={path.path}>
+              <div>
+                <h4>{path.path}</h4>
+                <span>{path.fit}</span>
+              </div>
+              <p>{path.rationale}</p>
+            </article>
+          ))}
+        </div>
+      </DetailSection>
+
+      <DetailSection eyebrow="Decision lens" title="Lens behavior">
+        <div className="lens-chip-row">
+          {decisionLensPresets.map((lens) => (
+            <span key={lens}>{lens}</span>
+          ))}
+        </div>
+        <div className="lens-behavior-list">
+          {initiative.decisionLensBehaviors.map((behavior) => (
+            <article className="lens-behavior-card" key={behavior.lens}>
+              <div className="lens-behavior-header">
+                <h4>{behavior.lens}</h4>
+                <span>
+                  Recommendation changed: {behavior.recommendationChanged ? 'Yes' : 'No'}
+                </span>
+              </div>
+              <div className="lens-detail-grid">
+                <div>
+                  <strong>Emphasis changes</strong>
+                  <SimpleList items={behavior.emphasisChanges} />
+                </div>
+                <div>
+                  <strong>Paths affected</strong>
+                  <SimpleList items={[...behavior.pathsAffected]} />
+                </div>
+                <div>
+                  <strong>New questions</strong>
+                  <SimpleList items={behavior.newQuestionsToAsk} />
+                </div>
+                <div>
+                  <strong>Future direction</strong>
+                  <p>{behavior.futureDirection}</p>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </DetailSection>
+
+      <DetailSection eyebrow="Candidate requirements map" title="Requirement categories">
+        <div className="requirements-grid">
+          {requirementCategories.map((category) => (
+            <RequirementGroup
+              key={category}
+              requirements={initiative.candidateRequirementsMap[category]}
+              title={category}
+            />
+          ))}
+        </div>
+      </DetailSection>
+
+      <DetailSection eyebrow="Requirements by solution path" title="Path-specific requirements">
+        <div className="path-requirements-list">
+          {requirementPathEntries.map(([path, requirements]) => (
+            <article className="path-requirements-card" key={path}>
+              <h4>{path}</h4>
+              <div className="requirements-grid">
+                {requirementCategories.map((category) => (
+                  <RequirementGroup
+                    key={category}
+                    requirements={requirements[category]}
+                    title={category}
+                  />
+                ))}
+              </div>
+            </article>
+          ))}
+        </div>
+      </DetailSection>
+
+      <DetailSection eyebrow="Target state and future scope" title="Future direction">
+        <div className="target-state-card">
+          <span>Target State</span>
+          <strong>{initiative.targetState}</strong>
+        </div>
+        <div className="future-scope-grid">
+          <article>
+            <h4>Later Capabilities</h4>
+            <SimpleList items={initiative.futureScope.laterCapabilities} />
+          </article>
+          <article>
+            <h4>Deferred Requirements</h4>
+            <SimpleList items={initiative.futureScope.deferredRequirements} />
+          </article>
+          <article>
+            <h4>Dependencies</h4>
+            <SimpleList items={initiative.futureScope.dependencies} />
+          </article>
+          <article>
+            <h4>Not Recommended Yet</h4>
+            <SimpleList
+              items={notRecommendedYet.map(
+                (path) => `${path.path}: ${path.rationale}`,
+              )}
+            />
+          </article>
+          <article>
+            <h4>Trigger to Revisit</h4>
+            <SimpleList items={initiative.futureScope.revisitTriggers} />
+          </article>
+        </div>
+      </DetailSection>
+
+      <DetailSection eyebrow="Pattern learning" title="Reusable learning">
+        <div className="pattern-learning-grid">
+          <article>
+            <h4>Repeated pain patterns</h4>
+            <SimpleList items={initiative.patternLearning.repeatedPainPatterns} />
+          </article>
+          <article>
+            <h4>Common blockers</h4>
+            <SimpleList items={initiative.patternLearning.commonBlockers} />
+          </article>
+          <article>
+            <h4>Similar initiatives</h4>
+            <SimpleList items={initiative.patternLearning.similarInitiatives} />
+          </article>
+          <article>
+            <h4>Recurring systems</h4>
+            <SimpleList items={initiative.patternLearning.recurringSystems} />
+          </article>
+          <article>
+            <h4>Reusable requirement patterns</h4>
+            <SimpleList items={initiative.patternLearning.reusableRequirementPatterns} />
+          </article>
+          <article>
+            <h4>Solution paths chosen</h4>
+            <SimpleList items={[...initiative.patternLearning.solutionPathsChosen]} />
+          </article>
+          <article>
+            <h4>Successful approaches</h4>
+            <SimpleList items={initiative.patternLearning.successfulSolutionApproaches} />
+          </article>
+          <article>
+            <h4>Failed/deferred approaches</h4>
+            <SimpleList items={initiative.patternLearning.failedOrDeferredApproaches} />
+          </article>
+          <article>
+            <h4>Discovery gaps</h4>
+            <SimpleList items={initiative.patternLearning.commonDiscoveryGaps} />
+          </article>
+          <article>
+            <h4>Data readiness issues</h4>
+            <SimpleList items={initiative.patternLearning.dataReadinessIssues} />
+          </article>
+          <article>
+            <h4>Ownership problems</h4>
+            <SimpleList items={initiative.patternLearning.stakeholderOwnershipProblems} />
+          </article>
+        </div>
+      </DetailSection>
+    </section>
+  )
+}
+
+function InitiativesPage({
+  onBackToInitiatives,
+  onSelectInitiative,
+  selectedInitiative,
+}: InitiativeSelectionProps) {
   const [searchTerm, setSearchTerm] = useState('')
   const [departmentFilter, setDepartmentFilter] =
     useState<FilterValue<Department>>('All')
@@ -338,9 +650,15 @@ function InitiativesPage() {
     useState<FilterValue<RecommendedNextAction>>('All')
   const [solutionPathFilter, setSolutionPathFilter] =
     useState<FilterValue<SolutionPathOption>>('All')
-  const [selectedInitiative, setSelectedInitiative] = useState<Initiative | null>(
-    null,
-  )
+
+  if (selectedInitiative) {
+    return (
+      <InitiativeDetailPage
+        initiative={selectedInitiative}
+        onBack={onBackToInitiatives}
+      />
+    )
+  }
 
   const normalizedSearch = searchTerm.trim().toLowerCase()
   const filteredInitiatives = initiatives.filter((initiative) => {
@@ -454,29 +772,13 @@ function InitiativesPage() {
         </div>
       </div>
 
-      {selectedInitiative ? (
-        <aside className="selection-banner" aria-live="polite">
-          <div>
-            <span>Selected for Pass 5</span>
-            <strong>{selectedInitiative.title}</strong>
-          </div>
-          <button onClick={() => setSelectedInitiative(null)} type="button">
-            Clear selection
-          </button>
-        </aside>
-      ) : null}
-
       {filteredInitiatives.length > 0 ? (
         <div className="initiative-list" aria-label="Filtered initiatives">
           {filteredInitiatives.map((initiative) => (
             <button
-              className={
-                selectedInitiative?.id === initiative.id
-                  ? 'initiative-row selected'
-                  : 'initiative-row'
-              }
+              className="initiative-row"
               key={initiative.id}
-              onClick={() => setSelectedInitiative(initiative)}
+              onClick={() => onSelectInitiative(initiative)}
               type="button"
             >
               <div className="initiative-row-main">
@@ -577,6 +879,17 @@ function PlaceholderSection({ activeSection }: { activeSection: SectionKey }) {
 
 function App() {
   const [activeSection, setActiveSection] = useState<SectionKey>('home')
+  const [selectedInitiative, setSelectedInitiative] = useState<Initiative | null>(
+    null,
+  )
+
+  const handleNavChange = (section: SectionKey) => {
+    setActiveSection(section)
+
+    if (section !== 'initiatives') {
+      setSelectedInitiative(null)
+    }
+  }
 
   return (
     <div className="app-shell">
@@ -596,7 +909,7 @@ function App() {
             <button
               className={item.key === activeSection ? 'nav-item active' : 'nav-item'}
               key={item.key}
-              onClick={() => setActiveSection(item.key)}
+              onClick={() => handleNavChange(item.key)}
               type="button"
             >
               <span>{item.label}</span>
@@ -630,7 +943,11 @@ function App() {
         {activeSection === 'home' ? (
           <WayfinderHome />
         ) : activeSection === 'initiatives' ? (
-          <InitiativesPage />
+          <InitiativesPage
+            onBackToInitiatives={() => setSelectedInitiative(null)}
+            onSelectInitiative={setSelectedInitiative}
+            selectedInitiative={selectedInitiative}
+          />
         ) : (
           <PlaceholderSection activeSection={activeSection} />
         )}
