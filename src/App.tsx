@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import {
   decisionLensPresets,
+  departments,
   initiatives,
   recommendedNextActions,
   requirementCategories,
@@ -8,6 +9,8 @@ import {
   wayfinderDataSummary,
   type Department,
   type Initiative,
+  type RecommendedNextAction,
+  type SolutionPathOption,
 } from './data/wayfinderData'
 import './App.css'
 
@@ -38,6 +41,8 @@ type RecentSignal = {
   initiativeTitle: string
   department: Department
 }
+
+type FilterValue<T extends string> = T | 'All'
 
 const navItems: NavItem[] = [
   { key: 'home', label: 'Wayfinder', eyebrow: 'Command' },
@@ -325,6 +330,186 @@ function WayfinderHome() {
   )
 }
 
+function InitiativesPage() {
+  const [searchTerm, setSearchTerm] = useState('')
+  const [departmentFilter, setDepartmentFilter] =
+    useState<FilterValue<Department>>('All')
+  const [nextActionFilter, setNextActionFilter] =
+    useState<FilterValue<RecommendedNextAction>>('All')
+  const [solutionPathFilter, setSolutionPathFilter] =
+    useState<FilterValue<SolutionPathOption>>('All')
+  const [selectedInitiative, setSelectedInitiative] = useState<Initiative | null>(
+    null,
+  )
+
+  const normalizedSearch = searchTerm.trim().toLowerCase()
+  const filteredInitiatives = initiatives.filter((initiative) => {
+    const matchesSearch =
+      normalizedSearch.length === 0 ||
+      initiative.title.toLowerCase().includes(normalizedSearch) ||
+      initiative.problemSummary.toLowerCase().includes(normalizedSearch)
+
+    const matchesDepartment =
+      departmentFilter === 'All' || initiative.department === departmentFilter
+    const matchesNextAction =
+      nextActionFilter === 'All' ||
+      initiative.recommendedNextAction === nextActionFilter
+    const matchesSolutionPath =
+      solutionPathFilter === 'All' ||
+      initiative.primarySolutionPath === solutionPathFilter
+
+    return (
+      matchesSearch &&
+      matchesDepartment &&
+      matchesNextAction &&
+      matchesSolutionPath
+    )
+  })
+
+  return (
+    <section className="initiatives-page" aria-labelledby="initiatives-title">
+      <div className="list-page-header">
+        <div>
+          <p className="eyebrow">Initiatives</p>
+          <h3 id="initiatives-title">Initiative intelligence queue</h3>
+          <p>
+            Search and filter the local mock portfolio by operational context,
+            recommended next action, and primary solution path.
+          </p>
+        </div>
+        <div className="list-page-count">
+          <span>{filteredInitiatives.length}</span>
+          <p>
+            Showing of {initiatives.length}
+          </p>
+        </div>
+      </div>
+
+      <div className="initiative-toolbar">
+        <label className="search-field">
+          <span>Search initiatives</span>
+          <input
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Search by title or problem summary"
+            type="search"
+            value={searchTerm}
+          />
+        </label>
+
+        <div className="filter-grid">
+          <label>
+            <span>Department</span>
+            <select
+              onChange={(event) =>
+                setDepartmentFilter(event.target.value as FilterValue<Department>)
+              }
+              value={departmentFilter}
+            >
+              <option value="All">All departments</option>
+              {departments.map((department) => (
+                <option key={department} value={department}>
+                  {department}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <span>Recommended next action</span>
+            <select
+              onChange={(event) =>
+                setNextActionFilter(
+                  event.target.value as FilterValue<RecommendedNextAction>,
+                )
+              }
+              value={nextActionFilter}
+            >
+              <option value="All">All next actions</option>
+              {recommendedNextActions.map((action) => (
+                <option key={action} value={action}>
+                  {action}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <span>Primary solution path</span>
+            <select
+              onChange={(event) =>
+                setSolutionPathFilter(
+                  event.target.value as FilterValue<SolutionPathOption>,
+                )
+              }
+              value={solutionPathFilter}
+            >
+              <option value="All">All solution paths</option>
+              {solutionPathOptions.map((path) => (
+                <option key={path} value={path}>
+                  {path}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      </div>
+
+      {selectedInitiative ? (
+        <aside className="selection-banner" aria-live="polite">
+          <div>
+            <span>Selected for Pass 5</span>
+            <strong>{selectedInitiative.title}</strong>
+          </div>
+          <button onClick={() => setSelectedInitiative(null)} type="button">
+            Clear selection
+          </button>
+        </aside>
+      ) : null}
+
+      {filteredInitiatives.length > 0 ? (
+        <div className="initiative-list" aria-label="Filtered initiatives">
+          {filteredInitiatives.map((initiative) => (
+            <button
+              className={
+                selectedInitiative?.id === initiative.id
+                  ? 'initiative-row selected'
+                  : 'initiative-row'
+              }
+              key={initiative.id}
+              onClick={() => setSelectedInitiative(initiative)}
+              type="button"
+            >
+              <div className="initiative-row-main">
+                <div className="initiative-row-heading">
+                  <h4>{initiative.title}</h4>
+                  <span>{initiative.department}</span>
+                </div>
+                <p>{shorten(initiative.problemSummary, 168)}</p>
+              </div>
+
+              <div className="initiative-row-meta">
+                <span>
+                  <small>Next action</small>
+                  {initiative.recommendedNextAction}
+                </span>
+                <span>
+                  <small>Primary path</small>
+                  {initiative.primarySolutionPath}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="empty-state">
+          <h4>No initiatives match this view</h4>
+          <p>Adjust the search text or filters to broaden the initiative queue.</p>
+        </div>
+      )}
+    </section>
+  )
+}
+
 function PlaceholderSection({ activeSection }: { activeSection: SectionKey }) {
   const activeContent = sectionContent[activeSection]
   const previewInitiatives = initiatives.slice(0, 3)
@@ -444,6 +629,8 @@ function App() {
 
         {activeSection === 'home' ? (
           <WayfinderHome />
+        ) : activeSection === 'initiatives' ? (
+          <InitiativesPage />
         ) : (
           <PlaceholderSection activeSection={activeSection} />
         )}
