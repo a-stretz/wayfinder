@@ -1,73 +1,55 @@
-# React + TypeScript + Vite
+# Wayfinder
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Wayfinder is an internal strategy and initiative intelligence prototype. It helps product and operations leaders turn scattered operational signals into structured initiatives, solution path recommendations, candidate requirements, and practical next actions.
 
-Currently, two official plugins are available:
+## What Problem It Solves
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Operational improvement work often starts as scattered notes, requests, pain points, workflow issues, dashboard gaps, or early ideas. Wayfinder gives that raw input a clearer path: capture the signal, shape it into an initiative, compare solution paths, and identify the next useful action.
 
-## React Compiler
+## Core Concepts
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Signal:** Raw input from notes, files, requests, pain points, workflow issues, dashboards, prototypes, or ideas.
+- **Initiative:** The central object being analyzed and shaped.
+- **Solution Path:** A possible route for solving the initiative, such as process improvement, reporting, automation, or prototyping.
+- **Waypoint:** The prominent recommendation section inside an initiative workspace.
+- **Decision Lens:** A perspective that changes emphasis, questions, or direction without forcing a recommendation change.
 
-## Expanding the ESLint configuration
+## What Is Included
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- Home dashboard for priorities, patterns, signals, and action summaries
+- Searchable and filterable initiatives list
+- Full initiative detail workspace
+- Interactive decision lens behavior
+- Manual intake simulation for structuring raw signals
+- Patterns page for cross-initiative learning
+- Playbook page for reusable action guidance
+- Local mock dataset and local-only added initiatives
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## What Is Not Included
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- No backend
+- No authentication
+- No database
+- No persistence across refreshes
+- No real AI analysis
+- No file parsing or external integrations
+- No numeric scoring or prioritization model
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Run Locally
+
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Open the local URL shown by Vite.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Feature Overview
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- **Home dashboard:** Strategic control surface for what needs attention, recommended actions, emerging patterns, and recent signals.
+- **Initiatives list:** Search and filter initiatives by department, recommended next action, and primary solution path.
+- **Initiative detail workspace:** Full structured view of context, inputs, scoping, recommendation, solution map, requirements, future scope, and pattern learning.
+- **Decision lenses:** Select a lens to see how emphasis, questions, and future direction change.
+- **Intake simulation:** Manually enter a raw signal and generate a simulated structured initiative draft.
+- **Patterns:** Aggregate repeated pain patterns, blockers, readiness issues, systems, similar initiatives, and reusable requirements.
+- **Playbooks:** Turn common patterns into repeatable guidance for action.
