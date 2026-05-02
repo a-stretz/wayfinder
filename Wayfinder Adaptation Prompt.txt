@@ -1,0 +1,366 @@
+You are an expert product strategist, AI systems architect, product operations designer, and prompt-driven specification editor.
+
+Your task is to adapt Wayfinder to a specific company using two inputs:
+
+1. The canonical Wayfinder Core Product Spec
+2. A Company Deep Research Report
+
+Your job is not to rewrite Wayfinder from scratch.
+
+Your job is to create a modular Company Adaptation Package that shows how Wayfinder should be positioned, configured, demonstrated, and implemented for this company.
+
+## Inputs
+
+Company name:
+[COMPANY_NAME]
+
+Wayfinder Core Product Spec:
+[PASTE OR ATTACH SPEC]
+
+Company Deep Research Report:
+[PASTE OR ATTACH REPORT]
+
+Optional constraints:
+[PASTE ANY CONSTRAINTS]
+
+## Core Judgment Standard
+
+The base Wayfinder spec may already be a strong fit.
+
+Do not make changes just to show activity.
+
+Only adapt the product when the research indicates that this company needs different emphasis across:
+
+- Users
+- Sponsors
+- Workflows
+- Risks
+- Solution paths
+- Data assumptions
+- Governance needs
+- Operating cadence
+- Examples
+- Terminology
+- Scoring logic
+- Recommendation behavior
+- Roadmap priorities
+- Adoption model
+- Future architecture assumptions
+
+Preserve the core Wayfinder product thesis unless the company profile creates a clear reason to change it.
+
+## Evidence Discipline
+
+Use the Company Deep Research Report as the source of truth.
+
+Label major adaptation decisions as:
+
+- Observed
+- Inferred
+- Hypothesized
+- Unknown
+
+Do not invent internal systems, AI programs, data warehouses, tools, governance models, or production integrations.
+
+## Required Outputs
+
+Produce five separate artifacts.
+
+Do not combine them into one giant document.
+
+---
+
+# 01_adaptation_summary.md
+
+Include:
+
+## Adaptation Verdict
+
+- Adaptation severity: Keep Same, Focused Adaptation, Modular Reconfiguration, or Strategic Overhaul
+- Rationale
+- Confidence level
+- What stayed the same
+- What changed
+- What was not changed and why
+
+## Company Fit Summary
+
+| Dimension | Finding | Evidence Label | Product Implication |
+|---|---|---|---|
+| Business model fit |  |  |  |
+| Operating complexity |  |  |  |
+| Initiative portfolio fit |  |  |  |
+| Technical readiness |  |  |  |
+| Data readiness |  |  |  |
+| Governance need |  |  |  |
+| Primary user fit |  |  |  |
+| Highest-value workflows |  |  |  |
+| Adoption posture |  |  |  |
+| Differentiation fit |  |  |  |
+
+## Specification Change Summary
+
+| Spec Area | Keep / Modify / Add / Remove / Defer | Rationale | Evidence Label |
+|---|---|---|---|
+| Product thesis |  |  |  |
+| Primary users |  |  |  |
+| Navigation |  |  |  |
+| Home dashboard |  |  |  |
+| Intake model |  |  |  |
+| Initiative object model |  |  |  |
+| Scoping analysis |  |  |  |
+| Initiative readiness |  |  |  |
+| Waypoint recommendation logic |  |  |  |
+| Solution paths |  |  |  |
+| Decision lenses |  |  |  |
+| Candidate requirements |  |  |  |
+| Pattern learning |  |  |  |
+| Mock data |  |  |  |
+| Governance model |  |  |  |
+| Future architecture |  |  |  |
+| Roadmap |  |  |  |
+
+## Strategic Emphasis
+
+Include:
+
+- What the system should help leadership see
+- What product, operations, or systems teams should decide
+- What initiatives should be prioritized in examples
+- What risks should be more visible
+- What recommendation behavior should be tuned
+- What future learning loops matter most
+- What should remain flexible because research does not confirm enough detail
+
+---
+
+# 02_spec_overlay.md
+
+Create a patch layer for the canonical Wayfinder spec.
+
+Include:
+
+## Company-Specific Positioning
+
+Explain how Wayfinder should be framed for this company.
+
+## Primary Users and Sponsors
+
+List likely:
+
+- Daily users
+- Sponsors
+- Reviewers
+- Governance participants
+- Beneficiaries
+
+## Workflow Emphasis
+
+List the highest-value workflow domains and why they matter.
+
+## Added or Emphasized Fields
+
+Recommend fields to add or emphasize in the initiative model.
+
+For each field include:
+
+- Field name
+- Type
+- Why it matters
+- Evidence label
+
+## Recommendation Logic Adjustments
+
+Explain how Waypoint recommendations should be tuned.
+
+## Solution Path Emphasis
+
+Identify which solution paths should be emphasized, reduced, or deferred.
+
+## Decision Lens Adjustments
+
+Identify lenses to add, remove, or emphasize.
+
+## Governance and Risk Triggers
+
+Define company-relevant review triggers.
+
+## Roadmap Emphasis
+
+Explain how V1, V2, V3, and V4 should be prioritized for this company.
+
+## What Should Remain Unchanged
+
+List parts of the Wayfinder core spec that should not change.
+
+---
+
+# 03_initiative_dataset.json
+
+Create a realistic, sanitized dataset.
+
+Use this structure:
+
+[
+  {
+    "id": "",
+    "title": "",
+    "functionalArea": "",
+    "sourceType": "",
+    "rawSignal": "",
+    "workflowArea": "",
+    "problemSummary": "",
+    "requestedSolution": "",
+    "rootCauseHypothesis": "",
+    "stakeholders": [],
+    "systemsMentioned": [],
+    "detectedSignals": [],
+    "businessImpact": "",
+    "urgency": "",
+    "feasibility": "",
+    "dataReadiness": "",
+    "readinessState": "",
+    "recommendedNextAction": "",
+    "waypointRationale": "",
+    "primarySolutionPath": "",
+    "supportingSolutionPaths": [],
+    "candidateRequirements": {
+      "business": [],
+      "user": [],
+      "workflow": [],
+      "data": [],
+      "system": [],
+      "aiAutomation": [],
+      "governance": [],
+      "successMetrics": []
+    },
+    "risks": [],
+    "governanceFlags": [],
+    "patternMatches": [],
+    "successMetrics": [],
+    "whyItBelongsInPrototype": "",
+    "evidenceLabel": ""
+  }
+]
+
+Create enough examples to support a credible prototype.
+
+Prioritize quality over quantity.
+
+---
+
+# 04_build_instructions.md
+
+Write instructions for an AI-assisted developer.
+
+Include:
+
+## Build Objective
+
+What should be built or modified.
+
+## Inputs
+
+List required inputs.
+
+## Current-State Assumptions
+
+Clarify whether the app is static, mock-data driven, or connected.
+
+## Page-Level Instructions
+
+Include instructions for:
+
+- Home
+- Initiatives
+- Initiative detail
+- Intake
+- Patterns
+- Playbook
+- Any demo or README pages
+
+## Component-Level Instructions
+
+Identify components to create or modify.
+
+## Data Instructions
+
+Explain how to use the initiative dataset.
+
+## Recommendation Logic Instructions
+
+Explain what logic should be simulated now and what should be deferred.
+
+## Visual and UX Rules
+
+Explain tone, density, labels, and design constraints.
+
+## Do Not Change
+
+List protected product concepts.
+
+## Quality Checks
+
+Include local run, lint, data validation, content review, and demo review.
+
+## README and Deployment
+
+Include README, user guide, demo strategy, GitHub, and Netlify expectations.
+
+---
+
+# 05_demo_narrative.md
+
+Create a company-specific demo narrative.
+
+Include:
+
+## Demo Premise
+
+What situation the demo represents.
+
+## Executive Opening
+
+How to explain the value in plain business language.
+
+## Walkthrough Flow
+
+Step-by-step demo path.
+
+## Best Initiatives to Demo
+
+Pick the best 3 examples from the dataset.
+
+For each:
+
+- Why it works
+- What it proves
+- What Wayfinder helps decide
+
+## How to Explain Waypoints
+
+Explain the recommendation concept.
+
+## How to Explain Governance
+
+Explain risk and review routing.
+
+## How to Explain Pattern Learning
+
+Explain how the system improves over time.
+
+## V1 Limitation Script
+
+Explain what is simulated or manual today.
+
+## Future Roadmap Script
+
+Explain what connected intelligence would unlock.
+
+## Closing Value Message
+
+End with a concise value statement.
+
+## Final Rule
+
+Do not produce a full rewritten company-specific spec unless explicitly requested.

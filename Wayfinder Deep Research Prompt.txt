@@ -1,0 +1,227 @@
+# Company Deep Research Prompt for Wayfinder Adaptation
+
+You are an expert company research analyst, product strategist, and AI transformation researcher.
+
+Your task is to produce a deep research report on the following company so that a product strategy system called Wayfinder can be adapted to that company.
+
+Wayfinder is an internal initiative intelligence system. It helps organizations capture scattered operational signals, workflow pain points, internal requests, dashboard asks, automation ideas, AI opportunities, lightweight tools, and strategic initiatives, then convert them into structured initiatives, recommendations, solution paths, candidate requirements, governance visibility, and pattern learning.
+
+## Company
+
+Company name: [COMPANY_NAME]
+
+Website: [COMPANY_WEBSITE]
+
+Additional materials:
+[PASTE MATERIALS, JOB DESCRIPTIONS, NOTES, OR LINKS]
+
+## Research Objective
+
+Research the company deeply enough to understand how Wayfinder should be positioned, adapted, demonstrated, and configured for this company.
+
+Do not build the product.
+Do not write the Wayfinder spec.
+Do not create implementation instructions yet.
+
+This stage is only the company research and operating context brief.
+
+## Evidence Discipline
+
+Label major claims as:
+
+- Observed: directly supported by public evidence or provided material
+- Inferred: reasonable interpretation based on evidence
+- Hypothesized: plausible opportunity, but not confirmed
+- Unknown: insufficient evidence
+
+Do not invent:
+
+- Internal systems
+- AI programs
+- Departments
+- Data warehouses
+- Governance models
+- Tech stack details
+- Executive priorities
+- Workflow ownership
+- Existing initiatives
+- Production integrations
+
+When evidence is insufficient, say Unknown.
+
+## Required Research Sections
+
+## 1. Executive Summary
+
+Summarize:
+
+- What the company does
+- How it creates value
+- Why its operating model may or may not fit Wayfinder
+- The highest-value areas for internal initiative intelligence
+- The most important uncertainties
+
+## 2. Company and Operating Model
+
+Answer:
+
+- What does the company actually do?
+- What are the major business lines?
+- Who are its customers, users, tenants, clients, partners, or stakeholders?
+- How does the company make money?
+- What makes the operating model complex?
+- What workflows likely require cross-functional coordination?
+- Where might internal software, automation, dashboards, AI, or lightweight tools create value?
+
+## 3. Department and Workflow Map
+
+Create a table:
+
+| Department / Function | Evidence Label | Core Workflows | Likely Pain Points | AI / Automation Opportunity | Relevance to Wayfinder |
+|---|---|---|---|---|---|
+
+Include only departments supported by evidence or clearly labeled as inferred.
+
+## 4. Technology and Systems Signals
+
+Create a table:
+
+| System Category | Evidence Found | Confidence | Likely Data / Workflow | AI Opportunity | Data Readiness Risk |
+|---|---|---|---|---|---|
+
+Include:
+
+- Publicly visible software
+- Job description technology references
+- Analytics tools
+- Data science signals
+- Product or automation roles
+- Collaboration systems, if known
+- Unknowns where evidence is insufficient
+
+## 5. AI, Data, and Product Maturity Assessment
+
+Assess likely maturity.
+
+Use this scale:
+
+- Level 0: No visible digital or AI readiness
+- Level 1: Basic systems and manual reporting
+- Level 2: Some structured systems and reporting
+- Level 3: Active analytics, automation, or internal tooling
+- Level 4: Formal product, data, or AI operating model
+- Level 5: Scaled AI-native operating model
+
+Include:
+
+- Likely current level
+- Evidence
+- Confidence
+- What would need to be true to move up one level
+- Whether the company appears centralized, decentralized, or hybrid
+
+## 6. Leadership and Culture Signals
+
+Analyze:
+
+- Leadership philosophy
+- Pace of execution
+- Risk appetite
+- Culture around innovation
+- Culture around ownership
+- Likely appetite for experimentation
+- How Wayfinder should be positioned to fit the culture
+
+## 7. Initiative Hypotheses
+
+Create realistic, sanitized initiative hypotheses that Wayfinder could help structure.
+
+Each initiative should include:
+
+- id
+- department
+- sourceType
+- rawInput
+- workflowArea
+- problemType
+- systemsMentioned
+- stakeholders
+- detectedSignals
+- operationalInitiative
+- businessImpact
+- urgency
+- feasibility
+- dataReadiness
+- aiMaturityRequired
+- riskIfUngoverned
+- whyThisMightBeFastBuilt
+- wayfinderRelevance
+- evidenceLabel
+
+Use Hypothesized unless the initiative is directly confirmed.
+
+## 8. Governance and Risk Analysis
+
+Identify the most relevant risks:
+
+- Financial risk
+- Operational risk
+- Legal risk
+- Compliance risk
+- Customer or tenant risk
+- Data privacy risk
+- Reputational risk
+- AI hallucination risk
+- Unsupported shadow tooling
+- Unclear ownership
+- Integration risk
+- Poor source confidence
+- Over-automation risk
+
+Explain which risks should be emphasized in Wayfinder for this company.
+
+## 9. Wayfinder Fit Assessment
+
+Create a table:
+
+| Dimension | Finding | Evidence Label | Product Implication |
+|---|---|---|---|
+| Business model fit |  |  |  |
+| Operating complexity |  |  |  |
+| Initiative portfolio fit |  |  |  |
+| Technical readiness |  |  |  |
+| Data readiness |  |  |  |
+| Governance need |  |  |  |
+| Primary user fit |  |  |  |
+| Highest-value workflows |  |  |  |
+| Adoption posture |  |  |  |
+| Differentiation fit |  |  |  |
+
+## 10. Open Questions
+
+List questions that require company input before building a serious company-specific prototype.
+
+Group by:
+
+- Strategy
+- Users
+- Workflows
+- Systems
+- Data
+- Governance
+- AI readiness
+- Success metrics
+
+## Final Output Requirements
+
+The report must be:
+
+- Specific
+- Evidence-labeled
+- Honest about uncertainty
+- Useful for adapting Wayfinder
+- Focused on operating context, not generic company description
+
+Do not write the product spec.
+Do not create the initiative dataset yet.
+Do not write build instructions yet.
