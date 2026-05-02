@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type FormEvent, type ReactNode } from 'react'
 import {
   decisionLensPresets,
   departments,
@@ -45,9 +45,22 @@ type RecentSignal = {
 type FilterValue<T extends string> = T | 'All'
 
 type InitiativeSelectionProps = {
+  initiativeItems: Initiative[]
   selectedInitiative: Initiative | null
   onSelectInitiative: (initiative: Initiative) => void
   onBackToInitiatives: () => void
+}
+
+type IntakePageProps = {
+  onAddInitiative: (initiative: Initiative) => void
+}
+
+type StructuredDraft = {
+  title: string
+  problemSummary: string
+  recommendedNextAction: RecommendedNextAction
+  primarySolutionPath: SolutionPathOption
+  supportingSolutionPaths: SolutionPathOption[]
 }
 
 const navItems: NavItem[] = [
@@ -685,6 +698,7 @@ function InitiativeDetailPage({
 }
 
 function InitiativesPage({
+  initiativeItems,
   onBackToInitiatives,
   onSelectInitiative,
   selectedInitiative,
@@ -707,7 +721,7 @@ function InitiativesPage({
   }
 
   const normalizedSearch = searchTerm.trim().toLowerCase()
-  const filteredInitiatives = initiatives.filter((initiative) => {
+  const filteredInitiatives = initiativeItems.filter((initiative) => {
     const matchesSearch =
       normalizedSearch.length === 0 ||
       initiative.title.toLowerCase().includes(normalizedSearch) ||
@@ -744,7 +758,7 @@ function InitiativesPage({
         <div className="list-page-count">
           <span>{filteredInitiatives.length}</span>
           <p>
-            Showing of {initiatives.length}
+            Showing of {initiativeItems.length}
           </p>
         </div>
       </div>
@@ -858,6 +872,438 @@ function InitiativesPage({
   )
 }
 
+const createEmptyRequirementMap = (): Initiative['candidateRequirementsMap'] =>
+  ({
+    'Business Requirements': [],
+    'User Requirements': [],
+    'Workflow Requirements': [],
+    'Data Requirements': [],
+    'System Requirements': [],
+    'AI / Automation Requirements': [],
+    'Governance Requirements': [],
+    'Success Metrics': [],
+  })
+
+const createLocalRequirementMap = (
+  id: string,
+  draft: StructuredDraft,
+): Initiative['candidateRequirementsMap'] => {
+  const map = createEmptyRequirementMap()
+
+  map['Business Requirements'] = [
+    {
+      id: `${id}-business-1`,
+      category: 'Business Requirements',
+      requirement: `Clarify the operating outcome for ${draft.title}.`,
+      rationale: 'The intake signal needs a crisp business reason before deeper shaping.',
+    },
+  ]
+  map['Workflow Requirements'] = [
+    {
+      id: `${id}-workflow-1`,
+      category: 'Workflow Requirements',
+      requirement: 'Identify the current handoff, owner, and decision points.',
+      rationale: 'This keeps the simulated initiative grounded in practical workflow discovery.',
+    },
+  ]
+  map['Data Requirements'] = [
+    {
+      id: `${id}-data-1`,
+      category: 'Data Requirements',
+      requirement: 'Confirm what source information is reliable enough to support action.',
+      rationale: 'Data readiness should be checked before building reporting or automation.',
+    },
+  ]
+
+  return map
+}
+
+const inferDraftFromSignal = ({
+  department,
+  rawInput,
+  title,
+}: {
+  department: Department
+  rawInput: string
+  title: string
+}): StructuredDraft => {
+  const normalizedInput = `${title} ${rawInput}`.toLowerCase()
+  const problemSummary =
+    rawInput.trim().length > 0
+      ? shorten(rawInput.trim(), 220)
+      : 'A new operational signal needs discovery before it can be shaped into an initiative.'
+
+  if (
+    normalizedInput.includes('dashboard') ||
+    normalizedInput.includes('report') ||
+    normalizedInput.includes('visibility') ||
+    normalizedInput.includes('status')
+  ) {
+    return {
+      title,
+      problemSummary,
+      recommendedNextAction: 'Create Reporting View',
+      primarySolutionPath: 'Reporting / Visibility',
+      supportingSolutionPaths: ['Process Improvement', 'Lightweight Prototype'],
+    }
+  }
+
+  if (
+    normalizedInput.includes('automation') ||
+    normalizedInput.includes('manual') ||
+    normalizedInput.includes('handoff') ||
+    normalizedInput.includes('workflow')
+  ) {
+    return {
+      title,
+      problemSummary,
+      recommendedNextAction: 'Map Workflow',
+      primarySolutionPath: 'Process Improvement',
+      supportingSolutionPaths: ['Workflow Automation', 'Reporting / Visibility'],
+    }
+  }
+
+  if (
+    normalizedInput.includes('ai') ||
+    normalizedInput.includes('summarize') ||
+    normalizedInput.includes('assistant')
+  ) {
+    return {
+      title,
+      problemSummary,
+      recommendedNextAction: 'Assess AI Fit',
+      primarySolutionPath: 'AI-Assisted Workflow',
+      supportingSolutionPaths: ['Knowledge / Memory Layer', 'Lightweight Prototype'],
+    }
+  }
+
+  if (
+    normalizedInput.includes('data') ||
+    normalizedInput.includes('exception') ||
+    normalizedInput.includes('payment') ||
+    department === 'Accounting'
+  ) {
+    return {
+      title,
+      problemSummary,
+      recommendedNextAction: 'Validate Data',
+      primarySolutionPath: 'Reporting / Visibility',
+      supportingSolutionPaths: ['Process Improvement', 'Workflow Automation'],
+    }
+  }
+
+  if (
+    normalizedInput.includes('prototype') ||
+    normalizedInput.includes('tool') ||
+    normalizedInput.includes('intake')
+  ) {
+    return {
+      title,
+      problemSummary,
+      recommendedNextAction: 'Build Prototype',
+      primarySolutionPath: 'Lightweight Prototype',
+      supportingSolutionPaths: ['Knowledge / Memory Layer', 'Process Improvement'],
+    }
+  }
+
+  return {
+    title,
+    problemSummary,
+    recommendedNextAction: 'Run Discovery',
+    primarySolutionPath: 'Knowledge / Memory Layer',
+    supportingSolutionPaths: ['Process Improvement', 'Lightweight Prototype'],
+  }
+}
+
+const createInitiativeFromDraft = ({
+  department,
+  draft,
+  notes,
+  rawInput,
+  tags,
+}: {
+  department: Department
+  draft: StructuredDraft
+  notes: string
+  rawInput: string
+  tags: string
+}): Initiative => {
+  const id = `local-${Date.now()}`
+  const candidateRequirementsMap = createLocalRequirementMap(id, draft)
+
+  return {
+    id,
+    title: draft.title,
+    department,
+    problemSummary: draft.problemSummary,
+    contextSummary:
+      notes.trim().length > 0
+        ? notes.trim()
+        : 'This locally added initiative was created from a manual intake signal and needs further discovery.',
+    rawSignals: [
+      {
+        id: `${id}-signal-1`,
+        source: 'Stakeholder Request',
+        summary: rawInput.trim() || draft.problemSummary,
+        observedImpact:
+          tags.trim().length > 0
+            ? `Tagged during intake: ${tags.trim()}`
+            : 'Impact should be clarified during discovery.',
+      },
+    ],
+    scopingAnalysis:
+      'This is a simulated structuring output. Confirm owners, workflow boundaries, source information, and urgency before treating it as a fully shaped initiative.',
+    recommendedNextAction: draft.recommendedNextAction,
+    primarySolutionPath: draft.primarySolutionPath,
+    solutionPaths: [
+      {
+        path: draft.primarySolutionPath,
+        fit: 'Possible',
+        rationale:
+          'Suggested by simple keyword-based intake logic and should be validated by discovery.',
+      },
+      ...draft.supportingSolutionPaths.map((path) => ({
+        path,
+        fit: 'Later' as const,
+        rationale:
+          'Supporting path captured for consideration after the first discovery pass.',
+      })),
+    ],
+    candidateRequirementsMap,
+    requirementsBySolutionPath: {
+      [draft.primarySolutionPath]: candidateRequirementsMap,
+    },
+    targetState:
+      'The signal is clarified into a structured initiative with an accountable owner, defined workflow context, and practical next action.',
+    futureScope: {
+      laterCapabilities: ['Refine requirements after discovery', 'Compare alternate solution paths'],
+      deferredRequirements: ['Durable workflow design', 'Integration planning', 'Automation rules'],
+      dependencies: ['Stakeholder owner', 'Source information', 'Workflow boundary'],
+      revisitTriggers: ['Signal repeats', 'Manual work increases', 'Leadership asks for visibility'],
+    },
+    patternLearning: {
+      repeatedPainPatterns: ['Manual intake signal needs structured follow-up'],
+      commonBlockers: ['Unclear owner', 'Incomplete source context'],
+      similarInitiatives: [],
+      recurringSystems: [],
+      reusableRequirementPatterns: ['Owner, workflow, source information, next action'],
+      solutionPathsChosen: [draft.primarySolutionPath],
+      successfulSolutionApproaches: ['Start with discovery before committing to a build path'],
+      failedOrDeferredApproaches: ['Treating raw input as a complete requirement'],
+      commonDiscoveryGaps: ['Current workflow boundary', 'Decision owner', 'Source reliability'],
+      dataReadinessIssues: ['Source information not yet validated'],
+      stakeholderOwnershipProblems: ['Owner should be confirmed before execution'],
+    },
+    decisionLensBehaviors: [
+      {
+        lens: 'Fastest Useful Output',
+        recommendationChanged: false,
+        currentRecommendedNextAction: draft.recommendedNextAction,
+        emphasisChanges: ['Focus on the smallest useful clarification step.'],
+        pathsAffected: [draft.primarySolutionPath],
+        newQuestionsToAsk: ['What would make this signal useful enough to act on next?'],
+        futureDirection: 'Use the first pass to decide whether this becomes a larger initiative.',
+      },
+      {
+        lens: 'Safer First Step',
+        recommendationChanged: false,
+        currentRecommendedNextAction: draft.recommendedNextAction,
+        emphasisChanges: ['Emphasize validation before solution commitment.'],
+        pathsAffected: [draft.primarySolutionPath],
+        newQuestionsToAsk: ['What assumptions could make the suggested path risky?'],
+        futureDirection: 'Defer build decisions until the problem and owner are clearer.',
+      },
+      {
+        lens: 'Operational Stability',
+        recommendationChanged: false,
+        currentRecommendedNextAction: draft.recommendedNextAction,
+        emphasisChanges: ['Prioritize ownership, workflow fit, and repeatability.'],
+        pathsAffected: [draft.primarySolutionPath],
+        newQuestionsToAsk: ['Who owns the workflow and what happens if nothing changes?'],
+        futureDirection: 'Convert the signal into an operating rhythm only after discovery.',
+      },
+    ],
+  }
+}
+
+function IntakePage({ onAddInitiative }: IntakePageProps) {
+  const [title, setTitle] = useState('')
+  const [department, setDepartment] = useState<Department>('Operations')
+  const [rawInput, setRawInput] = useState('')
+  const [tags, setTags] = useState('')
+  const [notes, setNotes] = useState('')
+  const [draft, setDraft] = useState<StructuredDraft | null>(null)
+  const [addedTitle, setAddedTitle] = useState<string | null>(null)
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const fallbackTitle = 'Untitled Intake Signal'
+    const nextDraft = inferDraftFromSignal({
+      department,
+      rawInput,
+      title: title.trim() || fallbackTitle,
+    })
+
+    setDraft(nextDraft)
+    setAddedTitle(null)
+  }
+
+  const handleAddToInitiatives = () => {
+    if (!draft) {
+      return
+    }
+
+    const initiative = createInitiativeFromDraft({
+      department,
+      draft,
+      notes,
+      rawInput,
+      tags,
+    })
+
+    onAddInitiative(initiative)
+    setAddedTitle(initiative.title)
+  }
+
+  return (
+    <section className="intake-page" aria-labelledby="intake-title">
+      <div className="list-page-header">
+        <div>
+          <p className="eyebrow">Intake</p>
+          <h3 id="intake-title">Structure a raw signal</h3>
+          <p>
+            Capture messy notes, ideas, or operational pain and shape them into a
+            draft initiative direction.
+          </p>
+        </div>
+        <div className="list-page-count">
+          <span>{departments.length}</span>
+          <p>Departments available</p>
+        </div>
+      </div>
+
+      <div className="intake-workspace">
+        <form className="intake-form" onSubmit={handleSubmit}>
+          <div className="section-heading">
+            <p className="eyebrow">Raw input</p>
+            <h3>Signal capture</h3>
+          </div>
+
+          <label>
+            <span>Title</span>
+            <input
+              onChange={(event) => setTitle(event.target.value)}
+              placeholder="Short title for the signal"
+              type="text"
+              value={title}
+            />
+          </label>
+
+          <label>
+            <span>Department</span>
+            <select
+              onChange={(event) => setDepartment(event.target.value as Department)}
+              value={department}
+            >
+              {departments.map((departmentOption) => (
+                <option key={departmentOption} value={departmentOption}>
+                  {departmentOption}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <span>Raw Input / Signal</span>
+            <textarea
+              onChange={(event) => setRawInput(event.target.value)}
+              placeholder="Paste notes, describe the workflow issue, or capture the rough idea."
+              rows={8}
+              value={rawInput}
+            />
+          </label>
+
+          <label>
+            <span>Optional tags</span>
+            <input
+              onChange={(event) => setTags(event.target.value)}
+              placeholder="visibility, workflow, data, automation"
+              type="text"
+              value={tags}
+            />
+          </label>
+
+          <label>
+            <span>Optional notes</span>
+            <textarea
+              onChange={(event) => setNotes(event.target.value)}
+              placeholder="Any context, constraints, or open questions."
+              rows={4}
+              value={notes}
+            />
+          </label>
+
+          <button type="submit">Structure Signal</button>
+        </form>
+
+        <section className="intake-output" aria-live="polite">
+          <div className="section-heading">
+            <p className="eyebrow">Simulated structuring</p>
+            <h3>Draft output</h3>
+          </div>
+          <p className="simulation-note">
+            This is a simulated structuring step. In a full system, signals would
+            be analyzed and shaped into initiatives.
+          </p>
+
+          {draft ? (
+            <div className="draft-output-card">
+              <div>
+                <span>Draft Initiative Title</span>
+                <strong>{draft.title}</strong>
+              </div>
+              <div>
+                <span>Problem Summary</span>
+                <p>{draft.problemSummary}</p>
+              </div>
+              <div className="draft-output-grid">
+                <article>
+                  <span>Suggested Recommended Next Action</span>
+                  <strong>{draft.recommendedNextAction}</strong>
+                </article>
+                <article>
+                  <span>Suggested Primary Solution Path</span>
+                  <strong>{draft.primarySolutionPath}</strong>
+                </article>
+              </div>
+              <div>
+                <span>Example Supporting Solution Paths</span>
+                <div className="data-chip-row">
+                  {draft.supportingSolutionPaths.map((path) => (
+                    <span key={path}>{path}</span>
+                  ))}
+                </div>
+              </div>
+              <button onClick={handleAddToInitiatives} type="button">
+                Add to Initiatives
+              </button>
+              {addedTitle ? (
+                <p className="intake-confirmation">
+                  Added to local initiatives: {addedTitle}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <div className="lens-empty-state">
+              <p>Submit a signal to generate a simulated structured output.</p>
+            </div>
+          )}
+        </section>
+      </div>
+    </section>
+  )
+}
+
 function PlaceholderSection({ activeSection }: { activeSection: SectionKey }) {
   const activeContent = sectionContent[activeSection]
   const previewInitiatives = initiatives.slice(0, 3)
@@ -925,9 +1371,11 @@ function PlaceholderSection({ activeSection }: { activeSection: SectionKey }) {
 
 function App() {
   const [activeSection, setActiveSection] = useState<SectionKey>('home')
+  const [localInitiatives, setLocalInitiatives] = useState<Initiative[]>([])
   const [selectedInitiative, setSelectedInitiative] = useState<Initiative | null>(
     null,
   )
+  const initiativeItems = [...initiatives, ...localInitiatives]
 
   const handleNavChange = (section: SectionKey) => {
     setActiveSection(section)
@@ -990,9 +1438,19 @@ function App() {
           <WayfinderHome />
         ) : activeSection === 'initiatives' ? (
           <InitiativesPage
+            initiativeItems={initiativeItems}
             onBackToInitiatives={() => setSelectedInitiative(null)}
             onSelectInitiative={setSelectedInitiative}
             selectedInitiative={selectedInitiative}
+          />
+        ) : activeSection === 'intake' ? (
+          <IntakePage
+            onAddInitiative={(initiative) =>
+              setLocalInitiatives((currentInitiatives) => [
+                ...currentInitiatives,
+                initiative,
+              ])
+            }
           />
         ) : (
           <PlaceholderSection activeSection={activeSection} />
