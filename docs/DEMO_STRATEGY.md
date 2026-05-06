@@ -23,11 +23,11 @@ Show that Wayfinder is a strategy and initiative intelligence workspace, not a g
    - Start with the problem and context.
    - Show inputs and signals.
    - Explain scoping analysis before recommendations.
-   - Pause on the Waypoint as the recommendation section.
+   - Pause on Recommended Path as the recommendation section.
    - Show solution paths and requirements.
 
-5. **Show Decision Lens Behavior**
-   - Select a decision lens.
+5. **Show Decision Priority Behavior**
+   - Select a decision priority.
    - Explain whether the recommendation changes.
    - If it does not change, emphasize that the lens changes focus, questions, and future direction.
 
@@ -46,8 +46,8 @@ Show that Wayfinder is a strategy and initiative intelligence workspace, not a g
 - Wayfinder is not a task tracker.
 - The core value is recommendation clarity.
 - The workflow is **Signal -> Initiative -> Solution Path -> Action**.
-- The Waypoint makes the recommended next action visible but not premature.
-- Decision lenses help leaders test emphasis without relying on numeric scoring.
+- Recommended Path makes the next action visible but not premature.
+- Decision priorities help leaders test emphasis without relying on numeric scoring.
 - Intake is simulated in this prototype; it demonstrates the intended workflow, not real ingestion.
 - Patterns and Playbooks turn repeated operational friction into reusable guidance.
 

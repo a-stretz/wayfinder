@@ -1,58 +1,36 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
+import './App.css'
 import {
-  decisionLensPresets,
   departments,
+  decisionLensPresets,
   initiatives,
   recommendedNextActions,
   requirementCategories,
   solutionPathOptions,
-  wayfinderDataSummary,
   type Department,
   type Initiative,
+  type PatternLearning,
   type RecommendedNextAction,
+  type RequirementsByCategory,
   type SolutionPathOption,
 } from './data/wayfinderData'
-import './App.css'
 
-type SectionKey = 'home' | 'initiatives' | 'intake' | 'patterns' | 'playbook'
+type PageId = 'home' | 'initiatives' | 'intake' | 'patterns' | 'playbook'
 
-type NavItem = {
-  key: SectionKey
+type CountItem = {
   label: string
-  eyebrow: string
-}
-
-type SectionContent = {
-  title: string
-  summary: string
-  stat: string
-  statLabel: string
-  points: string[]
-}
-
-type CountItem<T extends string = string> = {
-  label: T
   count: number
 }
 
-type RecentSignal = {
-  id: string
-  summary: string
-  initiativeTitle: string
-  department: Department
-}
+type InitiativeSignal = Initiative['rawSignals'][number]
 
-type FilterValue<T extends string> = T | 'All'
-
-type InitiativeSelectionProps = {
-  initiativeItems: Initiative[]
-  selectedInitiative: Initiative | null
-  onSelectInitiative: (initiative: Initiative) => void
-  onBackToInitiatives: () => void
-}
-
-type IntakePageProps = {
-  onAddInitiative: (initiative: Initiative) => void
+type DraftSignal = {
+  title: string
+  departments: Department[]
+  rawInput: string
+  notes: string
+  mode: 'new' | 'existing'
+  targetInitiativeId: string
 }
 
 type StructuredDraft = {
@@ -63,1342 +41,1250 @@ type StructuredDraft = {
   supportingSolutionPaths: SolutionPathOption[]
 }
 
-type PatternPageProps = {
-  initiativeItems: Initiative[]
-}
-
-type PlaybookCard = {
-  title: string
-  whenToUse: string
-  recommendedFirstActions: RecommendedNextAction[]
-  typicalSolutionPaths: SolutionPathOption[]
-  commonRisks: string[]
-}
-
-const navItems: NavItem[] = [
-  { key: 'home', label: 'Wayfinder', eyebrow: 'Command' },
-  { key: 'initiatives', label: 'Initiatives', eyebrow: 'Portfolio' },
-  { key: 'intake', label: 'Intake', eyebrow: 'Signals' },
-  { key: 'patterns', label: 'Patterns', eyebrow: 'Learning' },
-  { key: 'playbook', label: 'Playbook', eyebrow: 'Guidance' },
+const navItems: Array<{ id: PageId; label: string }> = [
+  { id: 'home', label: 'Home' },
+  { id: 'initiatives', label: 'Initiative Queue' },
+  { id: 'intake', label: 'Add Signal' },
+  { id: 'patterns', label: 'Pattern Intelligence' },
+  { id: 'playbook', label: 'Recommendation Playbook' },
 ]
 
-const sectionContent: Record<SectionKey, SectionContent> = {
+const pageCopy: Record<PageId, { title: string; purpose: string; action?: string }> = {
   home: {
-    title: 'Wayfinder Home',
-    summary:
-      'A strategic control surface for what needs attention, what actions are recommended, and where operational friction is building.',
-    stat: String(wayfinderDataSummary.initiativeCount),
-    statLabel: 'active mock initiatives',
-    points: [
-      'Surface cross-functional signals without treating them as generic tasks.',
-      'Keep solution mapping and recommendation at the center of the workflow.',
-      'Prepare a clean foundation for later initiative intelligence passes.',
-    ],
+    title: 'Home',
+    purpose: 'See the highest-priority initiatives, recommended next actions, and emerging operational patterns.',
+    action: 'Add signal',
   },
   initiatives: {
-    title: 'Initiatives',
-    summary:
-      'A typed local dataset now anchors structured initiatives, mapped solution options, and recommendation status.',
-    stat: String(wayfinderDataSummary.initiativeCount),
-    statLabel: 'sample records',
-    points: [
-      'Each initiative includes signals, target state, future scope, and pattern learning.',
-      'Solution paths use qualitative fit labels instead of numeric scoring.',
-      'Designed as a dashboard surface rather than a generic project list.',
-    ],
+    title: 'Initiative Queue',
+    purpose: 'Search, filter, and open candidate workstreams for scoping and recommendation.',
+    action: 'Add signal',
   },
   intake: {
-    title: 'Intake',
-    summary:
-      'A future signal capture space for operational inputs, constraints, risks, and decision prompts.',
-    stat: String(wayfinderDataSummary.rawSignalCount),
-    statLabel: 'raw signals',
-    points: [
-      'Collect operational signals before they become formal initiatives.',
-      'Frame incoming context around friction, opportunity, and urgency.',
-      'Hold space for later candidate requirement extraction.',
-    ],
+    title: 'Add Signal',
+    purpose: 'Convert a rough operational issue into a structured initiative draft.',
+    action: 'Generate draft',
   },
   patterns: {
-    title: 'Patterns',
-    summary:
-      'A future intelligence layer for recurring operational patterns and reusable solution cues.',
-    stat: String(wayfinderDataSummary.solutionPathCount),
-    statLabel: 'solution paths',
-    points: [
-      'Spot repeated constraints across teams and workflows.',
-      'Connect similar signals to known recommendation patterns.',
-      'Support sharper solution paths over time.',
-    ],
+    title: 'Pattern Intelligence',
+    purpose: 'See repeated blockers, workflow gaps, data issues, and reusable solution patterns across initiatives.',
   },
   playbook: {
-    title: 'Playbook',
-    summary:
-      'A future guide surface for operating principles, recommendation criteria, and next-action templates.',
-    stat: String(wayfinderDataSummary.decisionLensCount),
-    statLabel: 'decision lenses',
-    points: [
-      'Keep solution mapping consistent across strategy work.',
-      'Make recommendation logic visible and reusable.',
-      'Capture practical next actions without adding workflow complexity.',
-    ],
+    title: 'Recommendation Playbook',
+    purpose: 'Understand how Wayfinder routes work to practical solution paths.',
   },
 }
 
-const countBy = <T extends string>(
-  values: T[],
-  preferredOrder?: readonly T[],
-): CountItem<T>[] => {
-  const countMap = values.reduce<Map<T, number>>(
-    (map, value) => map.set(value, (map.get(value) ?? 0) + 1),
-    new Map<T, number>(),
-  )
-
-  const orderedLabels = preferredOrder
-    ? preferredOrder.filter((label) => countMap.has(label))
-    : Array.from(countMap.keys())
-
-  return orderedLabels.map((label) => ({
-    label,
-    count: countMap.get(label) ?? 0,
-  }))
+const lensDisplayLabels: Record<string, string> = {
+  'Fastest Useful Output': 'Quickest Delivery',
+  'Low Engineering Lift': 'Easiest to Build',
+  'Safer First Step': 'Lowest Risk',
+  'Executive Visibility': 'Visibility',
+  'AI Leverage': 'AI Opportunity',
+  'Operational Stability': 'Stability',
+  'Cost Sensitive': 'Cost Control',
+  'Scale Ready': 'Scalability',
 }
 
-const topPatternItems = (items: string[], limit = 4): string[] =>
-  countBy(items)
-    .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label))
+const getLensLabel = (lens: string) => lensDisplayLabels[lens] ?? lens
+
+const getFitClass = (fit: string) =>
+  fit.toLowerCase().replaceAll(/[^a-z0-9]+/g, '-')
+
+const getRequirementHighlights = (initiative: Initiative) => {
+  const priorityCategories = ['Business Requirements', 'Workflow Requirements', 'Success Metrics'] as const
+
+  return priorityCategories
+    .flatMap((category) => initiative.candidateRequirementsMap[category] ?? [])
+    .slice(0, 4)
+    .map((item) => item.requirement)
+}
+
+const createAttachedSignal = (signal: Pick<DraftSignal, 'title' | 'departments' | 'rawInput' | 'notes'>): InitiativeSignal => ({
+  id: `signal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  source: signal.title.trim() || 'Added Signal',
+  summary: signal.rawInput.trim() || 'Additional signal added for review.',
+  observedImpact: [
+    signal.departments.length ? `Departments: ${signal.departments.join(', ')}` : '',
+    signal.notes.trim() || 'Impact and urgency should be clarified during discovery.',
+  ]
+    .filter(Boolean)
+    .join(' | '),
+})
+
+const emptyRequirementsByCategory = (): RequirementsByCategory => {
+  const requirements = {} as RequirementsByCategory
+
+  requirementCategories.forEach((category) => {
+    requirements[category] = []
+  })
+
+  return requirements
+}
+
+const truncate = (value: string, maxLength = 168) =>
+  value.length > maxLength ? `${value.slice(0, maxLength).trim()}...` : value
+
+const toSentence = (items: string[]) => (items.length ? items.join(', ') : 'None captured yet')
+
+const getTopCounts = (items: string[], limit = 6): CountItem[] => {
+  const counts = items.reduce<Record<string, number>>((acc, item) => {
+    acc[item] = (acc[item] ?? 0) + 1
+    return acc
+  }, {})
+
+  return Object.entries(counts)
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
     .slice(0, limit)
-    .map((item) => item.label)
-
-const shorten = (text: string, maxLength = 132): string =>
-  text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text
-
-const priorityInitiatives = initiatives.slice(0, 3)
-
-const departmentBreakdown = countBy(
-  initiatives.map((initiative) => initiative.department),
-).sort((left, right) => left.label.localeCompare(right.label))
-
-const solutionPathBreakdown = countBy(
-  initiatives.map((initiative) => initiative.primarySolutionPath),
-  solutionPathOptions,
-)
-
-const nextActionBreakdown = countBy(
-  initiatives.map((initiative) => initiative.recommendedNextAction),
-  recommendedNextActions,
-)
-
-const emergingPatterns = {
-  repeatedPainPatterns: topPatternItems(
-    initiatives.flatMap((initiative) => initiative.patternLearning.repeatedPainPatterns),
-  ),
-  commonBlockers: topPatternItems(
-    initiatives.flatMap((initiative) => initiative.patternLearning.commonBlockers),
-  ),
-  dataReadinessIssues: topPatternItems(
-    initiatives.flatMap((initiative) => initiative.patternLearning.dataReadinessIssues),
-  ),
 }
 
-const recentSignals: RecentSignal[] = initiatives
-  .flatMap((initiative) =>
-    initiative.rawSignals.map((signal) => ({
-      id: signal.id,
-      summary: signal.summary,
-      initiativeTitle: initiative.title,
-      department: initiative.department,
-    })),
-  )
-  .slice(0, 6)
+const countBy = <T,>(items: T[], getValue: (item: T) => string): CountItem[] =>
+  getTopCounts(items.map(getValue), items.length)
 
-function PriorityRecommendations() {
-  return (
-    <section className="home-section priority-section" aria-labelledby="priority-title">
-      <div className="section-heading">
-        <p className="eyebrow">Priority recommendations</p>
-        <h3 id="priority-title">Needs attention now</h3>
-      </div>
+const aggregatePatterns = (items: Initiative[]) => ({
+  repeatedPainPatterns: getTopCounts(items.flatMap((initiative) => initiative.patternLearning.repeatedPainPatterns)),
+  commonBlockers: getTopCounts(items.flatMap((initiative) => initiative.patternLearning.commonBlockers)),
+  dataReadinessIssues: getTopCounts(items.flatMap((initiative) => initiative.patternLearning.dataReadinessIssues)),
+  recurringSystems: getTopCounts(items.flatMap((initiative) => initiative.patternLearning.recurringSystems)),
+  similarInitiatives: getTopCounts(items.flatMap((initiative) => initiative.patternLearning.similarInitiatives)),
+  reusableRequirementPatterns: getTopCounts(
+    items.flatMap((initiative) => initiative.patternLearning.reusableRequirementPatterns),
+  ),
+})
 
-      <div className="priority-list">
-        {priorityInitiatives.map((initiative: Initiative) => (
-          <article className="priority-card" key={initiative.id}>
-            <div className="priority-card-header">
-              <span>{initiative.department}</span>
-              <strong>{initiative.recommendedNextAction}</strong>
-            </div>
-            <h4>{initiative.title}</h4>
-            <p>{shorten(initiative.problemSummary)}</p>
-            <div className="path-pill">{initiative.primarySolutionPath}</div>
-          </article>
-        ))}
-      </div>
-    </section>
-  )
+const createPatternLearning = (draft: StructuredDraft): PatternLearning => ({
+  repeatedPainPatterns: ['Unstructured signals need a clear routing path'],
+  commonBlockers: ['Incomplete source context', 'Unclear next-step owner'],
+  similarInitiatives: [],
+  recurringSystems: ['Email', 'Spreadsheets', 'Meetings'],
+  reusableRequirementPatterns: ['Problem, owner, workflow, data source, next action'],
+  solutionPathsChosen: [draft.primarySolutionPath, ...draft.supportingSolutionPaths],
+  successfulSolutionApproaches: ['Structure the signal before choosing a build path'],
+  failedOrDeferredApproaches: ['Moving directly from idea to implementation'],
+  commonDiscoveryGaps: ['Who owns the workflow and where the source signal lives'],
+  dataReadinessIssues: ['Source details may be incomplete at intake'],
+  stakeholderOwnershipProblems: ['Submitter and accountable owner may differ'],
+})
+
+const createInitiativeFromDraft = (draft: StructuredDraft, signal: DraftSignal): Initiative => {
+  const requirements = emptyRequirementsByCategory()
+
+  requirements['Business Requirements'] = [
+    {
+      id: `${Date.now()}-business-1`,
+      category: 'Business Requirements',
+      requirement: 'Clarify the operating problem and intended business outcome.',
+      rationale: 'Keeps the initiative tied to a practical decision or workflow need.',
+    },
+  ]
+
+  requirements['Workflow Requirements'] = [
+    {
+      id: `${Date.now()}-workflow-1`,
+      category: 'Workflow Requirements',
+      requirement: 'Identify the current workflow, owners, handoffs, and decision points.',
+      rationale: 'Turns the rough signal into a scoped operating problem.',
+    },
+  ]
+
+  requirements['Success Metrics'] = [
+    {
+      id: `${Date.now()}-success-1`,
+      category: 'Success Metrics',
+      requirement: 'Define what a useful first outcome should make easier to see, decide, or do.',
+      rationale: 'Prevents the initiative from becoming a vague improvement effort.',
+    },
+  ]
+
+  return {
+    id: `local-${Date.now()}`,
+    title: draft.title,
+    department: signal.departments[0] ?? departments[0],
+    problemSummary: draft.problemSummary,
+    contextSummary:
+      'This initiative was created through the simulated intake flow. It should be reviewed, scoped, and refined before any delivery path is chosen.',
+    rawSignals: [createAttachedSignal(signal)],
+    scopingAnalysis:
+      'The draft should be reviewed for workflow ownership, source data readiness, expected users, and the first useful operating output.',
+    recommendedNextAction: draft.recommendedNextAction,
+    primarySolutionPath: draft.primarySolutionPath,
+    solutionPaths: [
+      {
+        path: draft.primarySolutionPath,
+        fit: 'Good',
+        rationale: 'Suggested by the simulated intake template based on the signal language.',
+      },
+      ...draft.supportingSolutionPaths.map((path) => ({
+        path,
+        fit: 'Possible' as const,
+        rationale: 'Potential supporting path once discovery clarifies workflow, data, and ownership.',
+      })),
+    ],
+    candidateRequirementsMap: requirements,
+    requirementsBySolutionPath: {
+      [draft.primarySolutionPath]: requirements,
+    },
+    targetState:
+      'The issue is shaped into a clear initiative with a recommended next action, candidate path, and enough context for practical follow-up.',
+    futureScope: {
+      laterCapabilities: ['Additional requirements mapping', 'Decision priority review', 'Reusable playbook alignment'],
+      deferredRequirements: ['Persistence', 'Automated analysis', 'System integrations'],
+      dependencies: ['Workflow owner', 'Source context', 'Discovery conversation'],
+      revisitTriggers: ['Repeated signals appear', 'Ownership becomes clear', 'Data source is validated'],
+    },
+    patternLearning: createPatternLearning(draft),
+    decisionLensBehaviors: [
+      {
+        lens: 'Fastest Useful Output',
+        recommendationChanged: false,
+        currentRecommendedNextAction: draft.recommendedNextAction,
+        emphasisChanges: ['Keep the first step small enough to validate quickly.'],
+        pathsAffected: [draft.primarySolutionPath],
+        newQuestionsToAsk: ['What useful output could be created first?'],
+        futureDirection: 'Use discovery findings to decide whether this remains lightweight or needs a deeper path.',
+      },
+      {
+        lens: 'Operational Stability',
+        recommendationChanged: false,
+        currentRecommendedNextAction: draft.recommendedNextAction,
+        emphasisChanges: ['Clarify owners, handoffs, and review cadence before adding tooling.'],
+        pathsAffected: [draft.primarySolutionPath, ...draft.supportingSolutionPaths],
+        newQuestionsToAsk: ['Who owns the current workflow and who needs the output?'],
+        futureDirection: 'Stabilize the operating process before expanding scope.',
+      },
+      {
+        lens: 'AI Leverage',
+        recommendationChanged: draft.primarySolutionPath !== 'AI-Assisted Workflow',
+        currentRecommendedNextAction:
+          draft.primarySolutionPath === 'AI-Assisted Workflow' ? draft.recommendedNextAction : 'Assess AI Fit',
+        emphasisChanges: ['Evaluate whether AI helps the workflow or only adds novelty.'],
+        pathsAffected: ['AI-Assisted Workflow', draft.primarySolutionPath],
+        newQuestionsToAsk: ['What text, documents, or decisions would AI actually support?'],
+        futureDirection: 'Only move toward AI assistance if the workflow and data context are strong enough.',
+      },
+    ],
+  }
 }
 
-function CountList<T extends string>({
-  items,
-  label,
-}: {
-  items: CountItem<T>[]
-  label: string
-}) {
+function App() {
+  const [activePage, setActivePage] = useState<PageId>('home')
+  const [addedInitiatives, setAddedInitiatives] = useState<Initiative[]>([])
+  const [signalAdditions, setSignalAdditions] = useState<Record<string, InitiativeSignal[]>>({})
+  const [selectedInitiativeId, setSelectedInitiativeId] = useState<string | null>(null)
+
+  const allInitiatives = useMemo(
+    () =>
+      [...initiatives, ...addedInitiatives].map((initiative) => ({
+        ...initiative,
+        rawSignals: [...initiative.rawSignals, ...(signalAdditions[initiative.id] ?? [])],
+      })),
+    [addedInitiatives, signalAdditions],
+  )
+
+  const selectedInitiative = selectedInitiativeId
+    ? allInitiatives.find((initiative) => initiative.id === selectedInitiativeId) ?? null
+    : null
+
+  const navigate = (page: PageId) => {
+    setActivePage(page)
+    setSelectedInitiativeId(null)
+  }
+
+  const openAddSignal = () => {
+    setActivePage('intake')
+    setSelectedInitiativeId(null)
+  }
+
+  const addSignalToInitiative = (initiativeId: string, signal: InitiativeSignal) => {
+    setSignalAdditions((current) => ({
+      ...current,
+      [initiativeId]: [...(current[initiativeId] ?? []), signal],
+    }))
+  }
+
   return (
-    <div className="count-list" aria-label={label}>
-      {items.map((item) => (
-        <div className="count-row" key={item.label}>
-          <span>{item.label}</span>
-          <strong>{item.count}</strong>
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="brand-lockup" aria-label="Wayfinder">
+          <span className="brand-mark">W</span>
+          <div>
+            <strong>Wayfinder</strong>
+            <span>Strategy intelligence</span>
+          </div>
         </div>
-      ))}
+
+        <nav className="nav-list" aria-label="Primary navigation">
+          {navItems.map((item) => (
+            <button
+              className={`nav-item ${activePage === item.id && !selectedInitiative ? 'active' : ''}`}
+              key={item.id}
+              onClick={() => navigate(item.id)}
+              type="button"
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
+
+        <div className="system-note">
+          <span>Prototype mode</span>
+          <p>Local data, simulated structuring, no persistence.</p>
+        </div>
+      </aside>
+
+      <main className="main-surface">
+        {selectedInitiative ? (
+          <InitiativeDetail
+            initiative={selectedInitiative}
+            onAddSignal={(signal) => addSignalToInitiative(selectedInitiative.id, signal)}
+            onBack={() => setSelectedInitiativeId(null)}
+          />
+        ) : (
+          <>
+            {activePage === 'home' && <HomePage initiatives={allInitiatives} onAddSignal={openAddSignal} />}
+            {activePage === 'initiatives' && (
+              <InitiativesPage
+                initiatives={allInitiatives}
+                onAddSignal={openAddSignal}
+                onSelectInitiative={(initiative) => setSelectedInitiativeId(initiative.id)}
+              />
+            )}
+            {activePage === 'intake' && (
+              <IntakePage
+                initiatives={allInitiatives}
+                onAddInitiative={(initiative) => {
+                  setAddedInitiatives((current) => [initiative, ...current])
+                  setActivePage('initiatives')
+                }}
+                onAddSignalToInitiative={addSignalToInitiative}
+              />
+            )}
+            {activePage === 'patterns' && <PatternsPage initiatives={allInitiatives} />}
+            {activePage === 'playbook' && <PlaybookPage initiatives={allInitiatives} />}
+          </>
+        )}
+      </main>
     </div>
   )
 }
 
-function InitiativeOverview() {
+function PageHeader({
+  page,
+  onPrimaryAction,
+}: {
+  page: PageId
+  onPrimaryAction?: () => void
+}) {
+  const copy = pageCopy[page]
+
   return (
-    <section className="home-section overview-section" aria-labelledby="overview-title">
-      <div className="section-heading">
-        <p className="eyebrow">Initiative overview</p>
-        <h3 id="overview-title">Portfolio shape</h3>
+    <header className="page-header">
+      <div>
+        <p className="eyebrow">Wayfinder workspace</p>
+        <h1>{copy.title}</h1>
+        <p>{copy.purpose}</p>
       </div>
-
-      <div className="overview-metric">
-        <span>{wayfinderDataSummary.initiativeCount}</span>
-        <p>Total initiatives</p>
+      <div className="page-header-actions">
+        {copy.action && onPrimaryAction ? (
+          <button className="primary-button" onClick={onPrimaryAction} type="button">
+            {copy.action}
+          </button>
+        ) : null}
+        <WayfinderLogo />
       </div>
-
-      <div className="overview-columns">
-        <div>
-          <h4>By department</h4>
-          <CountList items={departmentBreakdown} label="Initiatives by department" />
-        </div>
-        <div>
-          <h4>By primary solution path</h4>
-          <CountList items={solutionPathBreakdown} label="Initiatives by primary solution path" />
-        </div>
-      </div>
-    </section>
+    </header>
   )
 }
 
-function EmergingPatterns() {
-  const patternGroups = [
-    { title: 'Repeated pain patterns', items: emergingPatterns.repeatedPainPatterns },
-    { title: 'Common blockers', items: emergingPatterns.commonBlockers },
-    { title: 'Data readiness issues', items: emergingPatterns.dataReadinessIssues },
+function WayfinderLogo() {
+  return (
+    <svg className="wayfinder-logo" viewBox="0 0 96 96" role="img" aria-label="Wayfinder compass mark">
+      <circle cx="48" cy="48" r="42" fill="none" stroke="currentColor" strokeWidth="8" />
+      <path className="logo-compass-lines" d="M48 16v26M48 54v26M16 48h26M54 48h26M28 28l14 14M54 54l14 14M68 28 54 42M42 54 28 68" />
+      <path className="logo-arrow-shadow" d="M71 25 39 51l11 5 5 14 16-45Z" />
+      <path className="logo-arrow" d="M72 24 34 49l18 7 7 18 13-50Z" />
+    </svg>
+  )
+}
+
+
+function WayfinderHero({ onAddSignal }: { onAddSignal: () => void }) {
+  const demoSteps = [
+    'Review the top recommended initiatives.',
+    'Open an initiative to inspect the recommendation.',
+    'Apply a prioritization lens to see how emphasis changes.',
+    'Add a new signal through Intake.',
   ]
 
-  return (
-    <section className="home-section patterns-section" aria-labelledby="patterns-title">
-      <div className="section-heading">
-        <p className="eyebrow">Emerging patterns</p>
-        <h3 id="patterns-title">Friction themes</h3>
-      </div>
-
-      <div className="pattern-grid">
-        {patternGroups.map((group) => (
-          <article className="pattern-card" key={group.title}>
-            <h4>{group.title}</h4>
-            <ul>
-              {group.items.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </article>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-function RecentSignals() {
-  return (
-    <section className="home-section signals-section" aria-labelledby="signals-title">
-      <div className="section-heading">
-        <p className="eyebrow">Recent signals</p>
-        <h3 id="signals-title">Operational inputs</h3>
-      </div>
-
-      <div className="signal-list">
-        {recentSignals.map((signal) => (
-          <article className="signal-row" key={signal.id}>
-            <p>{signal.summary}</p>
-            <span>
-              {signal.initiativeTitle} / {signal.department}
-            </span>
-          </article>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-function NextActionsSummary() {
-  return (
-    <section className="home-section next-actions-section" aria-labelledby="actions-title">
-      <div className="section-heading">
-        <p className="eyebrow">Recommended next actions</p>
-        <h3 id="actions-title">Action mix</h3>
-      </div>
-
-      <CountList items={nextActionBreakdown} label="Initiatives by recommended next action" />
-    </section>
-  )
-}
-
-function WayfinderHero() {
-  const beforeAfter = [
+  const examples = [
     {
-      before: '"Can we build a dashboard for debt covenants?"',
+      before: 'Can we build a dashboard for debt covenants?',
       action: 'Map Workflow first',
-      reason:
-        'Owners, escalation rules, and source documents are unclear. The dashboard becomes useful after Step 2.',
+      reason: 'Owners, escalation rules, and source documents are unclear. The dashboard becomes useful after workflow ownership is visible.',
     },
     {
-      before: '"Let\u2019s use AI to extract lease terms."',
+      before: 'Let us use AI to extract lease terms.',
       action: 'Assess AI Fit',
-      reason:
-        'Source-linking and legal review are required before this touches a tenant-facing workflow.',
+      reason: 'Source-linking and review requirements need to be validated before AI touches a sensitive workflow.',
     },
     {
-      before: '"I built a spreadsheet for billing variances."',
+      before: 'I built a spreadsheet for billing variances.',
       action: 'Build Prototype',
-      reason:
-        'Workflow is narrow, data is structured, scope is reversible. This is the right build moment.',
+      reason: 'The workflow is narrow, the data is structured, and the scope is reversible. This is the right build moment.',
     },
   ]
 
   return (
-    <section className="wayfinder-hero" aria-labelledby="hero-title">
-      <p className="hero-eyebrow">Decision-support layer for internal initiatives</p>
-      <h2 id="hero-title" className="hero-headline">
-        Wayfinder turns scattered internal demand into structured decisions —
-        so leaders move faster without losing control.
-      </h2>
+    <section className="wayfinder-hero" aria-labelledby="wayfinder-hero-title">
+      <div className="hero-main">
+        <div className="hero-copy">
+          <p className="eyebrow">Strategic intelligence cockpit</p>
+          <h2 id="wayfinder-hero-title">
+            Wayfinder turns scattered operational demand into structured decisions, practical next actions, and recommended solution paths.
+          </h2>
+          <p>
+            Use it to move from raw requests and messy notes to a clear initiative queue, visible tradeoffs, and a recommended first step.
+          </p>
+          <button className="primary-button" onClick={onAddSignal} type="button">
+            Add Signal
+          </button>
+        </div>
 
-      <div className="hero-split" aria-label="Before and after Wayfinder">
-        <div className="hero-split-header hero-split-header-before">
-          What teams send leadership today
+        <div className="hero-steps" aria-label="How to use this demo">
+          {demoSteps.map((step, index) => (
+            <div className="hero-step" key={step}>
+              <span>{index + 1}</span>
+              <p>{step}</p>
+            </div>
+          ))}
         </div>
-        <div className="hero-split-header hero-split-header-after">
-          What Wayfinder produces
-        </div>
-        {beforeAfter.map((row, i) => (
-          <div className="hero-split-row" key={i}>
-            <div className="hero-before">{row.before}</div>
+      </div>
+
+      <div className="hero-decision-panel" aria-label="Before and after Wayfinder examples">
+        <div className="hero-panel-heading before-heading">Raw request</div>
+        <div className="hero-panel-heading after-heading">Wayfinder output</div>
+        {examples.map((example) => (
+          <div className="hero-panel-row" key={example.before}>
+            <div className="hero-before">{example.before}</div>
             <div className="hero-after">
-              <strong>{row.action}.</strong> {row.reason}
+              <strong>{example.action}.</strong> {example.reason}
             </div>
           </div>
         ))}
       </div>
 
-      <article className="hero-waypoint" aria-label="Hero recommendation">
-        <p className="hero-waypoint-eyebrow">Recommended next action</p>
-        <h3 className="hero-waypoint-action">Map Workflow</h3>
-        <p className="hero-waypoint-initiative">
-          Initiative: Debt Obligation and Deadline Visibility
-        </p>
-        <p className="hero-waypoint-reason">
-          Ownership and handoffs are unclear. Reporting and automation become safer
-          after the operational workflow is visible.
+      <article className="hero-waypoint-card" aria-label="Example recommended next action">
+        <div>
+          <p className="eyebrow">Example recommended next action</p>
+          <h3>Map Workflow</h3>
+          <p>Debt Obligation and Deadline Visibility</p>
+        </div>
+        <p>
+          Ownership and handoffs are unclear. Reporting and automation become safer after the operational workflow is visible.
         </p>
       </article>
     </section>
   )
 }
 
-function WayfinderHome() {
+function HomePage({ initiatives, onAddSignal }: { initiatives: Initiative[]; onAddSignal: () => void }) {
+  const topInitiatives = initiatives.slice(0, 3)
+  const patterns = aggregatePatterns(initiatives)
+  const recentSignals = initiatives.flatMap((initiative) =>
+    initiative.rawSignals.map((signal) => ({
+      ...signal,
+      initiativeTitle: initiative.title,
+      department: initiative.department,
+    })),
+  )
+
   return (
-    <section className="home-dashboard" aria-label="Wayfinder Home dashboard">
-      <WayfinderHero />
-      <PriorityRecommendations />
-      <InitiativeOverview />
-      <EmergingPatterns />
-      <RecentSignals />
-      <NextActionsSummary />
-    </section>
+    <div className="page-stack">
+      <PageHeader page="home" onPrimaryAction={onAddSignal} />
+
+      <WayfinderHero onAddSignal={onAddSignal} />
+
+      <section className="section-block">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Priority recommendations</p>
+            <h2>Recommended next moves</h2>
+          </div>
+          <span className="section-note">Top candidate workstreams from current signals</span>
+        </div>
+        <div className="priority-grid">
+          {topInitiatives.map((initiative, index) => (
+            <article className={`priority-card ${index === 0 ? 'featured' : ''}`} key={initiative.id}>
+              <div className="card-topline">
+                <span className="chip dark">{initiative.department}</span>
+                <span className="chip accent">{initiative.recommendedNextAction}</span>
+              </div>
+              <h3>{initiative.title}</h3>
+              <p>{truncate(initiative.problemSummary, index === 0 ? 230 : 150)}</p>
+              <div className="path-callout">
+                <span>Recommended path</span>
+                <strong>{initiative.primarySolutionPath}</strong>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="content-grid">
+        <InsightPanel title="Initiative Overview" eyebrow="Operating picture">
+          <div className="metric-row">
+            <div className="metric-card">
+              <span>Total initiatives</span>
+              <strong>{initiatives.length}</strong>
+            </div>
+            <div className="metric-card">
+              <span>Raw signals</span>
+              <strong>{recentSignals.length}</strong>
+            </div>
+          </div>
+          <CountList title="By department" items={countBy(initiatives, (item) => item.department)} />
+          <CountList title="By primary path" items={countBy(initiatives, (item) => item.primarySolutionPath)} />
+        </InsightPanel>
+
+        <InsightPanel title="Emerging Patterns" eyebrow="Repeated friction">
+          <CountList title="Pain patterns" items={patterns.repeatedPainPatterns.slice(0, 4)} />
+          <CountList title="Common blockers" items={patterns.commonBlockers.slice(0, 4)} />
+          <CountList title="Data readiness issues" items={patterns.dataReadinessIssues.slice(0, 4)} />
+        </InsightPanel>
+      </section>
+
+      <section className="content-grid">
+        <InsightPanel title="Recent Signals" eyebrow="Raw inputs">
+          <div className="signal-list">
+            {recentSignals.slice(0, 5).map((signal) => (
+              <article className="signal-card" key={signal.id}>
+                <p>{signal.summary}</p>
+                <div>
+                  <span>{signal.initiativeTitle}</span>
+                  <span>{signal.department}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        </InsightPanel>
+
+        <InsightPanel title="Recommended Next Actions" eyebrow="Action summary">
+          <CountList title="Current recommendations" items={countBy(initiatives, (item) => item.recommendedNextAction)} />
+        </InsightPanel>
+      </section>
+    </div>
   )
 }
 
-const requirementHeading = (category: string): string =>
-  category
-    .replace(' Requirements', '')
-    .replace('AI / Automation', 'AI / Automation')
+function InitiativesPage({
+  initiatives,
+  onAddSignal,
+  onSelectInitiative,
+}: {
+  initiatives: Initiative[]
+  onAddSignal: () => void
+  onSelectInitiative: (initiative: Initiative) => void
+}) {
+  const [search, setSearch] = useState('')
+  const [department, setDepartment] = useState('All')
+  const [action, setAction] = useState('All')
+  const [path, setPath] = useState('All')
 
-function SimpleList({ items }: { items: string[] }) {
-  if (items.length === 0) {
-    return <p className="empty-inline">No items captured in the current dataset.</p>
+  const filtered = initiatives.filter((initiative) => {
+    const matchesSearch = `${initiative.title} ${initiative.problemSummary}`.toLowerCase().includes(search.toLowerCase())
+    const matchesDepartment = department === 'All' || initiative.department === department
+    const matchesAction = action === 'All' || initiative.recommendedNextAction === action
+    const matchesPath = path === 'All' || initiative.primarySolutionPath === path
+
+    return matchesSearch && matchesDepartment && matchesAction && matchesPath
+  })
+
+  return (
+    <div className="page-stack">
+      <PageHeader page="initiatives" onPrimaryAction={onAddSignal} />
+
+      <section className="queue-controls">
+        <label className="search-field">
+          <span>Search initiatives</span>
+          <input
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search by title or problem summary"
+            value={search}
+          />
+        </label>
+        <FilterSelect label="Department" value={department} options={['All', ...departments]} onChange={setDepartment} />
+        <FilterSelect label="Next action" value={action} options={['All', ...recommendedNextActions]} onChange={setAction} />
+        <FilterSelect label="Solution path" value={path} options={['All', ...solutionPathOptions]} onChange={setPath} />
+      </section>
+
+      {filtered.length ? (
+        <section className="initiative-list" aria-label="Initiative queue">
+          {filtered.map((initiative) => (
+            <button className="initiative-row" key={initiative.id} onClick={() => onSelectInitiative(initiative)} type="button">
+              <div>
+                <div className="card-topline">
+                  <span className="chip dark">{initiative.department}</span>
+                  <span className="chip muted">{initiative.primarySolutionPath}</span>
+                </div>
+                <h2>{initiative.title}</h2>
+                <p>{truncate(initiative.problemSummary, 210)}</p>
+              </div>
+              <div className="row-action">
+                <span>Next action</span>
+                <strong>{initiative.recommendedNextAction}</strong>
+              </div>
+            </button>
+          ))}
+        </section>
+      ) : (
+        <section className="empty-state">
+          <h2>No initiatives match these filters</h2>
+          <p>Adjust the search text or filters to broaden the initiative queue.</p>
+        </section>
+      )}
+    </div>
+  )
+}
+
+function InitiativeDetail({
+  initiative,
+  onAddSignal,
+  onBack,
+}: {
+  initiative: Initiative
+  onAddSignal: (signal: InitiativeSignal) => void
+  onBack: () => void
+}) {
+  const [selectedLens, setSelectedLens] = useState<string | null>(null)
+  const [newSignal, setNewSignal] = useState('')
+  const [newSignalNotes, setNewSignalNotes] = useState('')
+  const activeBehavior = initiative.decisionLensBehaviors.find((behavior) => behavior.lens === selectedLens)
+  const primaryRationale =
+    initiative.solutionPaths.find((path) => path.path === initiative.primarySolutionPath)?.rationale ?? initiative.scopingAnalysis
+  const requirementHighlights = getRequirementHighlights(initiative)
+
+  const handleAttachSignal = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (!newSignal.trim()) {
+      return
+    }
+
+    onAddSignal(
+      createAttachedSignal({
+        title: 'Initiative Signal',
+        departments: [initiative.department],
+        rawInput: newSignal,
+        notes: newSignalNotes,
+      }),
+    )
+    setNewSignal('')
+    setNewSignalNotes('')
   }
 
   return (
-    <ul className="detail-list">
-      {items.map((item) => (
-        <li key={item}>{item}</li>
-      ))}
-    </ul>
-  )
-}
+    <div className="page-stack detail-page">
+      <button className="back-button" onClick={onBack} type="button">
+        Back to Initiative Queue
+      </button>
 
-function RequirementGroup({
-  title,
-  requirements,
-}: {
-  title: string
-  requirements: Initiative['candidateRequirementsMap'][keyof Initiative['candidateRequirementsMap']]
-}) {
-  return (
-    <article className="requirement-group">
-      <h4>{requirementHeading(title)}</h4>
-      {requirements.length > 0 ? (
-        <div className="requirement-items">
-          {requirements.map((requirement) => (
-            <div className="requirement-item" key={requirement.id}>
-              <strong>{requirement.requirement}</strong>
-              <p>{requirement.rationale}</p>
-            </div>
-          ))}
+      <header className="detail-header">
+        <div>
+          <p className="eyebrow">{initiative.department}</p>
+          <h1>{initiative.title}</h1>
+          <p>{initiative.problemSummary}</p>
         </div>
-      ) : (
-        <p className="empty-inline">No requirements captured for this category.</p>
-      )}
-    </article>
+      </header>
+
+      <section className="problem-understanding" aria-label="Problem understanding and objective">
+        <article className="understanding-card primary">
+          <p className="eyebrow">Problem</p>
+          <h2>What needs to be understood before choosing the path?</h2>
+          <p>{initiative.contextSummary}</p>
+        </article>
+        <article className="understanding-card">
+          <p className="eyebrow">Current understanding</p>
+          <p>{initiative.scopingAnalysis}</p>
+        </article>
+        <article className="understanding-card objective-card">
+          <p className="eyebrow">Key objective</p>
+          <strong>{initiative.targetState}</strong>
+        </article>
+        <article className="understanding-card requirements-preview">
+          <p className="eyebrow">Requirement signals</p>
+          <ul>
+            {requirementHighlights.length ? (
+              requirementHighlights.map((requirement) => <li key={requirement}>{requirement}</li>)
+            ) : (
+              <li>No candidate requirements captured yet.</li>
+            )}
+          </ul>
+        </article>
+      </section>
+
+      <section className="recommended-path">
+        <div>
+          <p className="eyebrow">Recommended Path</p>
+          <h2>{initiative.primarySolutionPath}</h2>
+          <p>{primaryRationale}</p>
+        </div>
+        <div className="recommendation-action">
+          <span>Recommended next action</span>
+          <strong>{initiative.recommendedNextAction}</strong>
+        </div>
+      </section>
+
+      <section className="detail-scan-panel" aria-label="Initiative decision brief">
+        <div>
+          <p className="eyebrow">Decision brief</p>
+          <h2>Start with the problem, then scan the decision support only as needed.</h2>
+        </div>
+        <div className="detail-scan-grid">
+          <a href="#initiative-signals">Signals</a>
+          <a href="#prioritization-lens">Prioritization lens</a>
+          <a href="#solution-options">Solution options</a>
+          <a href="#supporting-detail">Supporting detail</a>
+        </div>
+      </section>
+
+      <section className="signal-attachment-panel" id="initiative-signals">
+        <div className="signal-panel-main">
+          <div>
+            <p className="eyebrow">Initiative signals</p>
+            <h2>Add new information to shape the next step</h2>
+            <p>
+              Signals attached here become part of this initiative's working context. In the full product, those signals would help refresh the requirements, prioritization lens, and recommended path.
+            </p>
+          </div>
+          <div className="attached-signal-list">
+            {initiative.rawSignals.map((signal) => (
+              <article className="attached-signal" key={signal.id}>
+                <span>{signal.source}</span>
+                <p>{signal.summary}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+        <form className="signal-attach-form" onSubmit={handleAttachSignal}>
+          <label>
+            <span>New signal or context</span>
+            <textarea
+              onChange={(event) => setNewSignal(event.target.value)}
+              placeholder="Paste an update, meeting note, stakeholder concern, source detail, or workflow discovery note."
+              rows={4}
+              value={newSignal}
+            />
+          </label>
+          <label>
+            <span>Optional impact / notes</span>
+            <input
+              onChange={(event) => setNewSignalNotes(event.target.value)}
+              placeholder="Why this changes urgency, scope, risk, or ownership"
+              value={newSignalNotes}
+            />
+          </label>
+          <button className="primary-button" type="submit">Attach signal</button>
+        </form>
+      </section>
+
+      <section className="detail-section lens-section" id="prioritization-lens">
+        <div className="section-heading lens-heading">
+          <div>
+            <p className="eyebrow">Prioritization Lens</p>
+            <h2>Apply a prioritization lens</h2>
+          </div>
+          <p className="lens-explainer">
+            Are there unique prioritization factors here that may influence the recommendation? Click a lens below to see how speed,
+            build effort, visibility, risk, or stability may alter the path, tradeoffs, and next questions.
+          </p>
+        </div>
+        <div className="lens-grid">
+          {decisionLensPresets.map((lens) => {
+            const available = initiative.decisionLensBehaviors.some((behavior) => behavior.lens === lens)
+
+            return (
+              <button
+                className={`lens-chip ${selectedLens === lens ? 'active' : ''}`}
+                disabled={!available}
+                key={lens}
+                onClick={() => setSelectedLens(lens)}
+                type="button"
+              >
+                {getLensLabel(lens)}
+              </button>
+            )
+          })}
+        </div>
+
+        {activeBehavior ? (
+          <article className="lens-output">
+            <div className="lens-output-top">
+              <span className="chip accent">{getLensLabel(activeBehavior.lens)}</span>
+              <strong>
+                Recommendation changed: {activeBehavior.recommendationChanged ? 'Yes' : 'No'}
+              </strong>
+            </div>
+            {!activeBehavior.recommendationChanged ? (
+              <p className="steady-note">
+                The recommendation stays the same. The prioritization lens changes emphasis, tradeoffs, and follow-up questions.
+              </p>
+            ) : null}
+            <div className="detail-grid">
+              <DetailList title="Current recommended next action" items={[activeBehavior.currentRecommendedNextAction]} />
+              <DetailList title="Emphasis changes" items={activeBehavior.emphasisChanges} />
+              <DetailList title="Paths affected" items={activeBehavior.pathsAffected} />
+              <DetailList title="New questions to ask" items={activeBehavior.newQuestionsToAsk} />
+              <DetailList title="Future direction" items={[activeBehavior.futureDirection]} />
+            </div>
+          </article>
+        ) : (
+          <div className="neutral-message">Select a prioritization lens to see how it changes emphasis.</div>
+        )}
+      </section>
+
+      <section className="detail-section" id="solution-options">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Solution Options</p>
+            <h2>Possible paths</h2>
+          </div>
+        </div>
+        <div className="solution-grid">
+          {initiative.solutionPaths.map((path) => {
+            const isPrimary = path.path === initiative.primarySolutionPath
+
+            return (
+              <article className={`solution-card ${isPrimary ? 'primary-path' : ''}`} key={path.path}>
+                <div className="card-topline">
+                  <span className={`fit-chip ${getFitClass(path.fit)}`}>{path.fit}</span>
+                  {isPrimary ? <span className="path-status-chip">Recommended</span> : null}
+                </div>
+                <h3>{path.path}</h3>
+                <p>{path.rationale}</p>
+              </article>
+            )
+          })}
+        </div>
+      </section>
+
+      <section className="supporting-detail-stack" id="supporting-detail">
+        <details className="detail-disclosure" open>
+          <summary>
+            <div>
+              <p className="eyebrow">Requirements</p>
+              <h2>Candidate requirements map</h2>
+              <p>Open when the recommendation needs to become scoped delivery work.</p>
+            </div>
+            <span>Review</span>
+          </summary>
+          <div className="disclosure-body">
+            <RequirementsGrid requirements={initiative.candidateRequirementsMap} />
+          </div>
+        </details>
+
+        <details className="detail-disclosure">
+          <summary>
+            <div>
+              <p className="eyebrow">Requirements by path</p>
+              <h2>How solution choices change the work</h2>
+              <p>Compare how the requirements shift if the team chooses a different solution path.</p>
+            </div>
+            <span>Expand</span>
+          </summary>
+          <div className="disclosure-body path-requirements">
+            {Object.entries(initiative.requirementsBySolutionPath).map(([pathName, requirements]) => (
+              <article className="detail-card" key={pathName}>
+                <h3>{pathName}</h3>
+                <RequirementsGrid requirements={requirements} compact />
+              </article>
+            ))}
+          </div>
+        </details>
+
+        <details className="detail-disclosure">
+          <summary>
+            <div>
+              <p className="eyebrow">Future Scope</p>
+              <h2>Target state, dependencies, and later decisions</h2>
+              <p>Keep the future visible without forcing every detail into the primary decision view.</p>
+            </div>
+            <span>Expand</span>
+          </summary>
+          <div className="disclosure-body content-grid">
+            <InsightPanel title="Target State" eyebrow="Future operating state">
+              <p className="large-copy">{initiative.targetState}</p>
+            </InsightPanel>
+            <InsightPanel title="Future Scope" eyebrow="Later decisions">
+              <DetailList title="Later capabilities" items={initiative.futureScope.laterCapabilities} />
+              <DetailList title="Deferred requirements" items={initiative.futureScope.deferredRequirements} />
+              <DetailList title="Dependencies" items={initiative.futureScope.dependencies} />
+              <DetailList title="Triggers to revisit" items={initiative.futureScope.revisitTriggers} />
+            </InsightPanel>
+          </div>
+        </details>
+
+        <details className="detail-disclosure">
+          <summary>
+            <div>
+              <p className="eyebrow">Pattern Learning</p>
+              <h2>Signals this initiative contributes</h2>
+              <p>Use this when comparing this initiative against repeated blockers, data issues, and reusable playbook patterns.</p>
+            </div>
+            <span>Expand</span>
+          </summary>
+          <div className="disclosure-body pattern-matrix">
+            <DetailList title="Repeated pain patterns" items={initiative.patternLearning.repeatedPainPatterns} />
+            <DetailList title="Common blockers" items={initiative.patternLearning.commonBlockers} />
+            <DetailList title="Similar initiatives" items={initiative.patternLearning.similarInitiatives} />
+            <DetailList title="Recurring systems" items={initiative.patternLearning.recurringSystems} />
+            <DetailList title="Reusable requirement patterns" items={initiative.patternLearning.reusableRequirementPatterns} />
+            <DetailList title="Solution paths chosen" items={initiative.patternLearning.solutionPathsChosen} />
+            <DetailList title="Successful approaches" items={initiative.patternLearning.successfulSolutionApproaches} />
+            <DetailList title="Failed or deferred approaches" items={initiative.patternLearning.failedOrDeferredApproaches} />
+            <DetailList title="Discovery gaps" items={initiative.patternLearning.commonDiscoveryGaps} />
+            <DetailList title="Data readiness issues" items={initiative.patternLearning.dataReadinessIssues} />
+            <DetailList title="Ownership problems" items={initiative.patternLearning.stakeholderOwnershipProblems} />
+          </div>
+        </details>
+      </section>
+    </div>
   )
 }
 
-function DetailSection({
-  children,
-  eyebrow,
-  title,
-  className = '',
+function IntakePage({
+  initiatives,
+  onAddInitiative,
+  onAddSignalToInitiative,
 }: {
-  children: ReactNode
-  eyebrow: string
-  title: string
-  className?: string
+  initiatives: Initiative[]
+  onAddInitiative: (initiative: Initiative) => void
+  onAddSignalToInitiative: (initiativeId: string, signal: InitiativeSignal) => void
 }) {
+  const [signal, setSignal] = useState<DraftSignal>({
+    title: '',
+    departments: [departments[0]],
+    rawInput: '',
+    notes: '',
+    mode: 'new',
+    targetInitiativeId: initiatives[0]?.id ?? '',
+  })
+  const [draft, setDraft] = useState<StructuredDraft | null>(null)
+  const [attachedMessage, setAttachedMessage] = useState<string | null>(null)
+
+  const selectedDepartments = signal.departments.length ? signal.departments : [departments[0]]
+
+  const toggleDepartment = (department: Department) => {
+    setSignal((current) => {
+      const nextDepartments = current.departments.includes(department)
+        ? current.departments.filter((item) => item !== department)
+        : [...current.departments, department]
+
+      return {
+        ...current,
+        departments: nextDepartments.length ? nextDepartments : [department],
+      }
+    })
+  }
+
+  const generateDraft = () => {
+    const text = `${signal.title} ${signal.rawInput} ${signal.notes}`.toLowerCase()
+    let nextAction: RecommendedNextAction = 'Run Discovery'
+    let primaryPath: SolutionPathOption = 'Process Improvement'
+
+    if (text.includes('report') || text.includes('visibility') || text.includes('dashboard') || text.includes('status')) {
+      nextAction = 'Create Reporting View'
+      primaryPath = 'Reporting / Visibility'
+    }
+
+    if (text.includes('automate') || text.includes('handoff') || text.includes('routing')) {
+      nextAction = 'Map Workflow'
+      primaryPath = 'Workflow Automation'
+    }
+
+    if (text.includes('ai') || text.includes('summary') || text.includes('idea')) {
+      nextAction = 'Assess AI Fit'
+      primaryPath = 'AI-Assisted Workflow'
+    }
+
+    if (text.includes('data') || text.includes('field') || text.includes('source')) {
+      nextAction = 'Validate Data'
+      primaryPath = 'Reporting / Visibility'
+    }
+
+    const supporting = solutionPathOptions
+      .filter((path) => path !== primaryPath && path !== 'Defer / Revisit')
+      .slice(0, 3)
+
+    setDraft({
+      title: signal.title || 'Untitled Operational Signal',
+      problemSummary:
+        signal.rawInput || 'A rough operational signal needs discovery before the right solution path can be selected.',
+      recommendedNextAction: nextAction,
+      primarySolutionPath: primaryPath,
+      supportingSolutionPaths: supporting,
+    })
+    setAttachedMessage(null)
+  }
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    generateDraft()
+  }
+
+  const handleAttachToExisting = () => {
+    const target = initiatives.find((initiative) => initiative.id === signal.targetInitiativeId)
+
+    if (!target) {
+      return
+    }
+
+    onAddSignalToInitiative(signal.targetInitiativeId, createAttachedSignal(signal))
+    setAttachedMessage(`Signal attached to ${target.title}.`)
+    setSignal((current) => ({ ...current, rawInput: '', notes: '' }))
+  }
+
   return (
-    <section className={`initiative-detail-section ${className}`} aria-labelledby={`${title.replaceAll(/\s+/g, '-').toLowerCase()}-title`}>
-      <div className="section-heading">
+    <div className="page-stack">
+      <PageHeader page="intake" onPrimaryAction={generateDraft} />
+
+      <section className="intake-layout">
+        <form className="intake-form" id="signal-form" onSubmit={handleSubmit}>
+          <div className="form-intro">
+            <p className="eyebrow">Manual signal intake</p>
+            <h2>Paste the rough issue, request, note, or idea.</h2>
+            <p className="example-prompt">
+              Example: The debt team keeps missing deadline updates because status lives across email, spreadsheets, and meetings.
+            </p>
+          </div>
+
+          <div className="intake-mode-toggle" aria-label="Signal destination">
+            <button
+              className={signal.mode === 'new' ? 'active' : ''}
+              onClick={() => setSignal((current) => ({ ...current, mode: 'new' }))}
+              type="button"
+            >
+              Create new initiative
+            </button>
+            <button
+              className={signal.mode === 'existing' ? 'active' : ''}
+              onClick={() => setSignal((current) => ({ ...current, mode: 'existing' }))}
+              type="button"
+            >
+              Attach to existing initiative
+            </button>
+          </div>
+
+          {signal.mode === 'existing' ? (
+            <label>
+              <span>Existing initiative</span>
+              <select
+                onChange={(event) => setSignal((current) => ({ ...current, targetInitiativeId: event.target.value }))}
+                value={signal.targetInitiativeId}
+              >
+                {initiatives.map((initiative) => (
+                  <option key={initiative.id} value={initiative.id}>{initiative.title}</option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+
+          <label>
+            <span>Title</span>
+            <input
+              onChange={(event) => setSignal((current) => ({ ...current, title: event.target.value }))}
+              placeholder="Short name for the issue"
+              value={signal.title}
+            />
+          </label>
+
+          <div className="department-picker">
+            <span>Departments involved</span>
+            <div className="department-chip-grid">
+              {departments.map((department) => (
+                <button
+                  className={selectedDepartments.includes(department) ? 'selected' : ''}
+                  key={department}
+                  onClick={() => toggleDepartment(department)}
+                  type="button"
+                >
+                  {department}
+                </button>
+              ))}
+            </div>
+            <p>Primary department for new initiatives: {selectedDepartments[0]}</p>
+          </div>
+
+          <label>
+            <span>Raw input / signal</span>
+            <textarea
+              onChange={(event) => setSignal((current) => ({ ...current, rawInput: event.target.value }))}
+              placeholder="Describe the issue, request, meeting note, workflow gap, or operational pain point."
+              rows={8}
+              value={signal.rawInput}
+            />
+          </label>
+
+          <label>
+            <span>Optional tags or notes</span>
+            <input
+              onChange={(event) => setSignal((current) => ({ ...current, notes: event.target.value }))}
+              placeholder="Owners, systems, urgency, or context"
+              value={signal.notes}
+            />
+          </label>
+
+          <button className="primary-button" type="submit">
+            Generate draft
+          </button>
+        </form>
+
+        <aside className="draft-panel">
+          <p className="eyebrow">Simulated structuring</p>
+          <p className="page-note">
+            Signals can create a new initiative or attach new context to an existing initiative. In a full system, these inputs would refresh requirements, priority, and recommendation logic.
+          </p>
+
+          {draft ? (
+            <article className="draft-card">
+              <span className="chip accent">Structured initiative draft</span>
+              <h2>{draft.title}</h2>
+              <p>{draft.problemSummary}</p>
+              <div className="draft-fields">
+                <div>
+                  <span>Departments involved</span>
+                  <strong>{toSentence(selectedDepartments)}</strong>
+                </div>
+                <div>
+                  <span>Recommended next action</span>
+                  <strong>{draft.recommendedNextAction}</strong>
+                </div>
+                <div>
+                  <span>Recommended solution path</span>
+                  <strong>{draft.primarySolutionPath}</strong>
+                </div>
+                <div>
+                  <span>Supporting solution paths</span>
+                  <strong>{toSentence(draft.supportingSolutionPaths)}</strong>
+                </div>
+              </div>
+              {signal.mode === 'new' ? (
+                <button className="primary-button full-width" onClick={() => onAddInitiative(createInitiativeFromDraft(draft, signal))} type="button">
+                  Add to Initiative Queue
+                </button>
+              ) : (
+                <button className="primary-button full-width" onClick={handleAttachToExisting} type="button">
+                  Attach Signal to Initiative
+                </button>
+              )}
+              {attachedMessage ? <p className="attach-confirmation">{attachedMessage}</p> : null}
+            </article>
+          ) : (
+            <div className="empty-draft">
+              <h2>No draft generated yet</h2>
+              <p>Add a signal and generate a structured initiative draft.</p>
+            </div>
+          )}
+        </aside>
+      </section>
+    </div>
+  )
+}
+
+function PatternsPage({ initiatives }: { initiatives: Initiative[] }) {
+  const patterns = aggregatePatterns(initiatives)
+
+  return (
+    <div className="page-stack">
+      <PageHeader page="patterns" />
+      <p className="page-note">
+        Patterns show where problems repeat across the organization. This helps identify where standard solutions or playbooks should exist.
+      </p>
+      <section className="pattern-cluster-grid">
+        <PatternCluster title="Repeated Pain Patterns" items={patterns.repeatedPainPatterns} />
+        <PatternCluster title="Common Blockers" items={patterns.commonBlockers} />
+        <PatternCluster title="Data Readiness Issues" items={patterns.dataReadinessIssues} />
+        <PatternCluster title="Recurring Systems" items={patterns.recurringSystems} />
+        <PatternCluster title="Similar Initiatives" items={patterns.similarInitiatives} />
+        <PatternCluster title="Reusable Requirement Patterns" items={patterns.reusableRequirementPatterns} />
+      </section>
+    </div>
+  )
+}
+
+function PlaybookPage({ initiatives }: { initiatives: Initiative[] }) {
+  const patterns = aggregatePatterns(initiatives)
+  const playbooks = [
+    {
+      title: 'Workflow Visibility Gaps',
+      when: 'Use when critical work is happening across email, spreadsheets, meetings, and personal tracking habits.',
+      actions: ['Map Workflow', 'Define ownership', 'Create a shared operating view'],
+      paths: ['Process Improvement', 'Reporting / Visibility'],
+      risks: ['Automating before ownership is clear', 'Confusing reporting with process control'],
+    },
+    {
+      title: 'Data Readiness Before Reporting',
+      when: 'Use when teams need visibility but source fields, status language, or ownership are inconsistent.',
+      actions: ['Validate Data', 'Normalize status definitions', 'Confirm trusted fields'],
+      paths: ['Reporting / Visibility', 'Workflow Automation'],
+      risks: ['Building dashboards from unreliable fields', 'Skipping source-of-truth decisions'],
+    },
+    {
+      title: 'Structured Intake and Memory',
+      when: 'Use when ideas, requests, and operational issues are appearing faster than they can be routed.',
+      actions: ['Run Discovery', 'Define intake fields', 'Route to the right solution path'],
+      paths: ['Knowledge / Memory Layer', 'Lightweight Prototype', 'AI-Assisted Workflow'],
+      risks: ['Letting informal ideas become ungoverned work', 'Treating AI as the default answer'],
+    },
+  ]
+
+  return (
+    <div className="page-stack">
+      <PageHeader page="playbook" />
+      <p className="page-note">Playbooks provide repeatable approaches to common operational problems.</p>
+      <section className="playbook-grid">
+        {playbooks.map((playbook, index) => (
+          <article className="playbook-card" key={playbook.title}>
+            <span className="playbook-index">{String(index + 1).padStart(2, '0')}</span>
+            <h2>{playbook.title}</h2>
+            <p>{playbook.when}</p>
+            <div className="playbook-columns">
+              <DetailList title="Recommended first actions" items={playbook.actions} />
+              <DetailList title="Typical solution paths" items={playbook.paths} />
+              <DetailList title="Common risks" items={playbook.risks} />
+            </div>
+          </article>
+        ))}
+      </section>
+      <section className="insight-band">
+        <span>Pattern base</span>
+        <p>
+          Current playbook logic is informed by {initiatives.length} initiatives and recurring patterns such as{' '}
+          {patterns.repeatedPainPatterns.slice(0, 2).map((item) => item.label).join(' and ')}.
+        </p>
+      </section>
+    </div>
+  )
+}
+
+function InsightPanel({ eyebrow, title, children }: { eyebrow: string; title: string; children: React.ReactNode }) {
+  return (
+    <section className="insight-panel">
+      <div className="panel-heading">
         <p className="eyebrow">{eyebrow}</p>
-        <h3 id={`${title.replaceAll(/\s+/g, '-').toLowerCase()}-title`}>{title}</h3>
+        <h2>{title}</h2>
       </div>
       {children}
     </section>
   )
 }
 
-function DecisionLensSection({ initiative }: { initiative: Initiative }) {
-  const [selectedLens, setSelectedLens] = useState<string | null>(null)
-  const selectedBehavior =
-    initiative.decisionLensBehaviors.find(
-      (behavior) => behavior.lens === selectedLens,
-    ) ?? null
-
+function CountList({ title, items }: { title: string; items: CountItem[] }) {
   return (
-    <DetailSection eyebrow="Decision lens" title="Lens behavior">
-      <div className="lens-chip-row" role="list" aria-label="Decision lenses">
-        {decisionLensPresets.map((lens) => {
-          const hasBehavior = initiative.decisionLensBehaviors.some(
-            (behavior) => behavior.lens === lens,
-          )
-
-          return (
-            <button
-              className={selectedLens === lens ? 'lens-chip selected' : 'lens-chip'}
-              disabled={!hasBehavior}
-              key={lens}
-              onClick={() => setSelectedLens(lens)}
-              type="button"
-            >
-              {lens}
-            </button>
-          )
-        })}
-      </div>
-
-      {selectedBehavior ? (
-        <article className="lens-behavior-card selected-behavior">
-          <div className="lens-behavior-header">
-            <div>
-              <span>Lens applied</span>
-              <h4>{selectedBehavior.lens}</h4>
-            </div>
-            <strong>
-              Recommendation changed:{' '}
-              {selectedBehavior.recommendationChanged ? 'Yes' : 'No'}
-            </strong>
-          </div>
-
-          {!selectedBehavior.recommendationChanged ? (
-            <p className="lens-stability-note">
-              The recommendation stays the same; this lens shifts emphasis within
-              the current direction.
-            </p>
-          ) : null}
-
-          <div className="selected-next-action">
-            <span>Current recommended next action</span>
-            <strong>{selectedBehavior.currentRecommendedNextAction}</strong>
-          </div>
-
-          <div className="lens-detail-grid">
-            <div>
-              <strong>Emphasis changes</strong>
-              <SimpleList items={selectedBehavior.emphasisChanges} />
-            </div>
-            <div>
-              <strong>Paths affected</strong>
-              <SimpleList items={[...selectedBehavior.pathsAffected]} />
-            </div>
-            <div>
-              <strong>New questions to ask</strong>
-              <SimpleList items={selectedBehavior.newQuestionsToAsk} />
-            </div>
-            <div>
-              <strong>Future direction</strong>
-              <p>{selectedBehavior.futureDirection}</p>
-            </div>
-          </div>
-        </article>
-      ) : (
-        <div className="lens-empty-state">
-          <p>Select a decision lens to see how it changes emphasis.</p>
-        </div>
-      )}
-    </DetailSection>
-  )
-}
-
-function InitiativeDetailPage({
-  initiative,
-  onBack,
-}: {
-  initiative: Initiative
-  onBack: () => void
-}) {
-  const primaryRationale =
-    initiative.solutionPaths.find((path) => path.path === initiative.primarySolutionPath)
-      ?.rationale ?? initiative.scopingAnalysis
-  const notRecommendedYet = initiative.solutionPaths.filter(
-    (path) => path.fit === 'Later' || path.fit === 'Poor',
-  )
-  const requirementPathEntries = Object.entries(initiative.requirementsBySolutionPath)
-
-  return (
-    <section className="initiative-detail-page" aria-labelledby="detail-title">
-      <button className="back-button" onClick={onBack} type="button">
-        Back to Initiatives
-      </button>
-
-      <header className="initiative-detail-header">
-        <div>
-          <p className="eyebrow">Initiative header</p>
-          <h3 id="detail-title">{initiative.title}</h3>
-          <p>{initiative.problemSummary}</p>
-        </div>
-        <span>{initiative.department}</span>
-      </header>
-
-      <DetailSection eyebrow="Context summary" title="Situation">
-        <p className="detail-copy">{initiative.contextSummary}</p>
-      </DetailSection>
-
-      <DetailSection eyebrow="Inputs and signals" title="Raw inputs">
-        <div className="signal-detail-grid">
-          {initiative.rawSignals.map((signal) => (
-            <article className="signal-detail-card" key={signal.id}>
-              <div>
-                <span>{signal.source}</span>
-                <small>{signal.id}</small>
-              </div>
-              <p>{signal.summary}</p>
-              <strong>{signal.observedImpact}</strong>
-            </article>
-          ))}
-        </div>
-      </DetailSection>
-
-      <DetailSection eyebrow="Scoping analysis" title="Shape of the work">
-        <p className="detail-copy">{initiative.scopingAnalysis}</p>
-      </DetailSection>
-
-      <DetailSection eyebrow="Waypoint" title="Recommendation" className="waypoint-section">
-        <div className="waypoint-grid">
-          <div>
-            <span>Recommended next action</span>
-            <strong>{initiative.recommendedNextAction}</strong>
-          </div>
-          <div>
-            <span>Primary solution path</span>
-            <strong>{initiative.primarySolutionPath}</strong>
-          </div>
-        </div>
-        <p>{primaryRationale}</p>
-      </DetailSection>
-
-      <DetailSection eyebrow="Solution map" title="Path options">
-        <div className="solution-map-grid">
-          {initiative.solutionPaths.map((path) => (
-            <article className="solution-map-card" key={path.path}>
-              <div>
-                <h4>{path.path}</h4>
-                <span>{path.fit}</span>
-              </div>
-              <p>{path.rationale}</p>
-            </article>
-          ))}
-        </div>
-      </DetailSection>
-
-      <DecisionLensSection initiative={initiative} />
-
-      <DetailSection eyebrow="Candidate requirements map" title="Requirement categories">
-        <div className="requirements-grid">
-          {requirementCategories.map((category) => (
-            <RequirementGroup
-              key={category}
-              requirements={initiative.candidateRequirementsMap[category]}
-              title={category}
-            />
-          ))}
-        </div>
-      </DetailSection>
-
-      <DetailSection eyebrow="Requirements by solution path" title="Path-specific requirements">
-        <div className="path-requirements-list">
-          {requirementPathEntries.map(([path, requirements]) => (
-            <article className="path-requirements-card" key={path}>
-              <h4>{path}</h4>
-              <div className="requirements-grid">
-                {requirementCategories.map((category) => (
-                  <RequirementGroup
-                    key={category}
-                    requirements={requirements[category]}
-                    title={category}
-                  />
-                ))}
-              </div>
-            </article>
-          ))}
-        </div>
-      </DetailSection>
-
-      <DetailSection eyebrow="Target state and future scope" title="Future direction">
-        <div className="target-state-card">
-          <span>Target State</span>
-          <strong>{initiative.targetState}</strong>
-        </div>
-        <div className="future-scope-grid">
-          <article>
-            <h4>Later Capabilities</h4>
-            <SimpleList items={initiative.futureScope.laterCapabilities} />
-          </article>
-          <article>
-            <h4>Deferred Requirements</h4>
-            <SimpleList items={initiative.futureScope.deferredRequirements} />
-          </article>
-          <article>
-            <h4>Dependencies</h4>
-            <SimpleList items={initiative.futureScope.dependencies} />
-          </article>
-          <article>
-            <h4>Not Recommended Yet</h4>
-            <SimpleList
-              items={notRecommendedYet.map(
-                (path) => `${path.path}: ${path.rationale}`,
-              )}
-            />
-          </article>
-          <article>
-            <h4>Trigger to Revisit</h4>
-            <SimpleList items={initiative.futureScope.revisitTriggers} />
-          </article>
-        </div>
-      </DetailSection>
-
-      <DetailSection eyebrow="Pattern learning" title="Reusable learning">
-        <div className="pattern-learning-grid">
-          <article>
-            <h4>Repeated pain patterns</h4>
-            <SimpleList items={initiative.patternLearning.repeatedPainPatterns} />
-          </article>
-          <article>
-            <h4>Common blockers</h4>
-            <SimpleList items={initiative.patternLearning.commonBlockers} />
-          </article>
-          <article>
-            <h4>Similar initiatives</h4>
-            <SimpleList items={initiative.patternLearning.similarInitiatives} />
-          </article>
-          <article>
-            <h4>Recurring systems</h4>
-            <SimpleList items={initiative.patternLearning.recurringSystems} />
-          </article>
-          <article>
-            <h4>Reusable requirement patterns</h4>
-            <SimpleList items={initiative.patternLearning.reusableRequirementPatterns} />
-          </article>
-          <article>
-            <h4>Solution paths chosen</h4>
-            <SimpleList items={[...initiative.patternLearning.solutionPathsChosen]} />
-          </article>
-          <article>
-            <h4>Successful approaches</h4>
-            <SimpleList items={initiative.patternLearning.successfulSolutionApproaches} />
-          </article>
-          <article>
-            <h4>Failed/deferred approaches</h4>
-            <SimpleList items={initiative.patternLearning.failedOrDeferredApproaches} />
-          </article>
-          <article>
-            <h4>Discovery gaps</h4>
-            <SimpleList items={initiative.patternLearning.commonDiscoveryGaps} />
-          </article>
-          <article>
-            <h4>Data readiness issues</h4>
-            <SimpleList items={initiative.patternLearning.dataReadinessIssues} />
-          </article>
-          <article>
-            <h4>Ownership problems</h4>
-            <SimpleList items={initiative.patternLearning.stakeholderOwnershipProblems} />
-          </article>
-        </div>
-      </DetailSection>
-    </section>
-  )
-}
-
-function InitiativesPage({
-  initiativeItems,
-  onBackToInitiatives,
-  onSelectInitiative,
-  selectedInitiative,
-}: InitiativeSelectionProps) {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [departmentFilter, setDepartmentFilter] =
-    useState<FilterValue<Department>>('All')
-  const [nextActionFilter, setNextActionFilter] =
-    useState<FilterValue<RecommendedNextAction>>('All')
-  const [solutionPathFilter, setSolutionPathFilter] =
-    useState<FilterValue<SolutionPathOption>>('All')
-
-  if (selectedInitiative) {
-    return (
-      <InitiativeDetailPage
-        initiative={selectedInitiative}
-        onBack={onBackToInitiatives}
-      />
-    )
-  }
-
-  const normalizedSearch = searchTerm.trim().toLowerCase()
-  const filteredInitiatives = initiativeItems.filter((initiative) => {
-    const matchesSearch =
-      normalizedSearch.length === 0 ||
-      initiative.title.toLowerCase().includes(normalizedSearch) ||
-      initiative.problemSummary.toLowerCase().includes(normalizedSearch)
-
-    const matchesDepartment =
-      departmentFilter === 'All' || initiative.department === departmentFilter
-    const matchesNextAction =
-      nextActionFilter === 'All' ||
-      initiative.recommendedNextAction === nextActionFilter
-    const matchesSolutionPath =
-      solutionPathFilter === 'All' ||
-      initiative.primarySolutionPath === solutionPathFilter
-
-    return (
-      matchesSearch &&
-      matchesDepartment &&
-      matchesNextAction &&
-      matchesSolutionPath
-    )
-  })
-
-  return (
-    <section className="initiatives-page" aria-labelledby="initiatives-title">
-      <div className="list-page-header">
-        <div>
-          <p className="eyebrow">Initiatives</p>
-          <h3 id="initiatives-title">Initiative intelligence queue</h3>
-          <p>
-            Search and filter the local mock portfolio by operational context,
-            recommended next action, and primary solution path.
-          </p>
-        </div>
-        <div className="list-page-count">
-          <span>{filteredInitiatives.length}</span>
-          <p>
-            Showing of {initiativeItems.length}
-          </p>
-        </div>
-      </div>
-
-      <div className="initiative-toolbar">
-        <label className="search-field">
-          <span>Search initiatives</span>
-          <input
-            onChange={(event) => setSearchTerm(event.target.value)}
-            placeholder="Search by title or problem summary"
-            type="search"
-            value={searchTerm}
-          />
-        </label>
-
-        <div className="filter-grid">
-          <label>
-            <span>Department</span>
-            <select
-              onChange={(event) =>
-                setDepartmentFilter(event.target.value as FilterValue<Department>)
-              }
-              value={departmentFilter}
-            >
-              <option value="All">All departments</option>
-              {departments.map((department) => (
-                <option key={department} value={department}>
-                  {department}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            <span>Recommended next action</span>
-            <select
-              onChange={(event) =>
-                setNextActionFilter(
-                  event.target.value as FilterValue<RecommendedNextAction>,
-                )
-              }
-              value={nextActionFilter}
-            >
-              <option value="All">All next actions</option>
-              {recommendedNextActions.map((action) => (
-                <option key={action} value={action}>
-                  {action}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            <span>Primary solution path</span>
-            <select
-              onChange={(event) =>
-                setSolutionPathFilter(
-                  event.target.value as FilterValue<SolutionPathOption>,
-                )
-              }
-              value={solutionPathFilter}
-            >
-              <option value="All">All solution paths</option>
-              {solutionPathOptions.map((path) => (
-                <option key={path} value={path}>
-                  {path}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      </div>
-
-      {filteredInitiatives.length > 0 ? (
-        <div className="initiative-list" aria-label="Filtered initiatives">
-          {filteredInitiatives.map((initiative) => (
-            <button
-              className="initiative-row"
-              key={initiative.id}
-              onClick={() => onSelectInitiative(initiative)}
-              type="button"
-            >
-              <div className="initiative-row-main">
-                <div className="initiative-row-heading">
-                  <h4>{initiative.title}</h4>
-                  <span>{initiative.department}</span>
-                </div>
-                <p>{shorten(initiative.problemSummary, 168)}</p>
-              </div>
-
-              <div className="initiative-row-meta">
-                <span>
-                  <small>Next action</small>
-                  {initiative.recommendedNextAction}
-                </span>
-                <span>
-                  <small>Primary path</small>
-                  {initiative.primarySolutionPath}
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
-      ) : (
-        <div className="empty-state">
-          <h4>No initiatives match this view</h4>
-          <p>Adjust the search text or filters to broaden the initiative queue.</p>
-        </div>
-      )}
-    </section>
-  )
-}
-
-const createEmptyRequirementMap = (): Initiative['candidateRequirementsMap'] =>
-  ({
-    'Business Requirements': [],
-    'User Requirements': [],
-    'Workflow Requirements': [],
-    'Data Requirements': [],
-    'System Requirements': [],
-    'AI / Automation Requirements': [],
-    'Governance Requirements': [],
-    'Success Metrics': [],
-  })
-
-const createLocalRequirementMap = (
-  id: string,
-  draft: StructuredDraft,
-): Initiative['candidateRequirementsMap'] => {
-  const map = createEmptyRequirementMap()
-
-  map['Business Requirements'] = [
-    {
-      id: `${id}-business-1`,
-      category: 'Business Requirements',
-      requirement: `Clarify the operating outcome for ${draft.title}.`,
-      rationale: 'The intake signal needs a crisp business reason before deeper shaping.',
-    },
-  ]
-  map['Workflow Requirements'] = [
-    {
-      id: `${id}-workflow-1`,
-      category: 'Workflow Requirements',
-      requirement: 'Identify the current handoff, owner, and decision points.',
-      rationale: 'This keeps the simulated initiative grounded in practical workflow discovery.',
-    },
-  ]
-  map['Data Requirements'] = [
-    {
-      id: `${id}-data-1`,
-      category: 'Data Requirements',
-      requirement: 'Confirm what source information is reliable enough to support action.',
-      rationale: 'Data readiness should be checked before building reporting or automation.',
-    },
-  ]
-
-  return map
-}
-
-const inferDraftFromSignal = ({
-  department,
-  rawInput,
-  title,
-}: {
-  department: Department
-  rawInput: string
-  title: string
-}): StructuredDraft => {
-  const normalizedInput = `${title} ${rawInput}`.toLowerCase()
-  const problemSummary =
-    rawInput.trim().length > 0
-      ? shorten(rawInput.trim(), 220)
-      : 'A new operational signal needs discovery before it can be shaped into an initiative.'
-
-  if (
-    normalizedInput.includes('dashboard') ||
-    normalizedInput.includes('report') ||
-    normalizedInput.includes('visibility') ||
-    normalizedInput.includes('status')
-  ) {
-    return {
-      title,
-      problemSummary,
-      recommendedNextAction: 'Create Reporting View',
-      primarySolutionPath: 'Reporting / Visibility',
-      supportingSolutionPaths: ['Process Improvement', 'Lightweight Prototype'],
-    }
-  }
-
-  if (
-    normalizedInput.includes('automation') ||
-    normalizedInput.includes('manual') ||
-    normalizedInput.includes('handoff') ||
-    normalizedInput.includes('workflow')
-  ) {
-    return {
-      title,
-      problemSummary,
-      recommendedNextAction: 'Map Workflow',
-      primarySolutionPath: 'Process Improvement',
-      supportingSolutionPaths: ['Workflow Automation', 'Reporting / Visibility'],
-    }
-  }
-
-  if (
-    normalizedInput.includes('ai') ||
-    normalizedInput.includes('summarize') ||
-    normalizedInput.includes('assistant')
-  ) {
-    return {
-      title,
-      problemSummary,
-      recommendedNextAction: 'Assess AI Fit',
-      primarySolutionPath: 'AI-Assisted Workflow',
-      supportingSolutionPaths: ['Knowledge / Memory Layer', 'Lightweight Prototype'],
-    }
-  }
-
-  if (
-    normalizedInput.includes('data') ||
-    normalizedInput.includes('exception') ||
-    normalizedInput.includes('payment') ||
-    department === 'Accounting'
-  ) {
-    return {
-      title,
-      problemSummary,
-      recommendedNextAction: 'Validate Data',
-      primarySolutionPath: 'Reporting / Visibility',
-      supportingSolutionPaths: ['Process Improvement', 'Workflow Automation'],
-    }
-  }
-
-  if (
-    normalizedInput.includes('prototype') ||
-    normalizedInput.includes('tool') ||
-    normalizedInput.includes('intake')
-  ) {
-    return {
-      title,
-      problemSummary,
-      recommendedNextAction: 'Build Prototype',
-      primarySolutionPath: 'Lightweight Prototype',
-      supportingSolutionPaths: ['Knowledge / Memory Layer', 'Process Improvement'],
-    }
-  }
-
-  return {
-    title,
-    problemSummary,
-    recommendedNextAction: 'Run Discovery',
-    primarySolutionPath: 'Knowledge / Memory Layer',
-    supportingSolutionPaths: ['Process Improvement', 'Lightweight Prototype'],
-  }
-}
-
-const createInitiativeFromDraft = ({
-  department,
-  draft,
-  notes,
-  rawInput,
-  tags,
-}: {
-  department: Department
-  draft: StructuredDraft
-  notes: string
-  rawInput: string
-  tags: string
-}): Initiative => {
-  const id = `local-${Date.now()}`
-  const candidateRequirementsMap = createLocalRequirementMap(id, draft)
-
-  return {
-    id,
-    title: draft.title,
-    department,
-    problemSummary: draft.problemSummary,
-    contextSummary:
-      notes.trim().length > 0
-        ? notes.trim()
-        : 'This locally added initiative was created from a manual intake signal and needs further discovery.',
-    rawSignals: [
-      {
-        id: `${id}-signal-1`,
-        source: 'Stakeholder Request',
-        summary: rawInput.trim() || draft.problemSummary,
-        observedImpact:
-          tags.trim().length > 0
-            ? `Tagged during intake: ${tags.trim()}`
-            : 'Impact should be clarified during discovery.',
-      },
-    ],
-    scopingAnalysis:
-      'This is a simulated structuring output. Confirm owners, workflow boundaries, source information, and urgency before treating it as a fully shaped initiative.',
-    recommendedNextAction: draft.recommendedNextAction,
-    primarySolutionPath: draft.primarySolutionPath,
-    solutionPaths: [
-      {
-        path: draft.primarySolutionPath,
-        fit: 'Possible',
-        rationale:
-          'Suggested by simple keyword-based intake logic and should be validated by discovery.',
-      },
-      ...draft.supportingSolutionPaths.map((path) => ({
-        path,
-        fit: 'Later' as const,
-        rationale:
-          'Supporting path captured for consideration after the first discovery pass.',
-      })),
-    ],
-    candidateRequirementsMap,
-    requirementsBySolutionPath: {
-      [draft.primarySolutionPath]: candidateRequirementsMap,
-    },
-    targetState:
-      'The signal is clarified into a structured initiative with an accountable owner, defined workflow context, and practical next action.',
-    futureScope: {
-      laterCapabilities: ['Refine requirements after discovery', 'Compare alternate solution paths'],
-      deferredRequirements: ['Durable workflow design', 'Integration planning', 'Automation rules'],
-      dependencies: ['Stakeholder owner', 'Source information', 'Workflow boundary'],
-      revisitTriggers: ['Signal repeats', 'Manual work increases', 'Leadership asks for visibility'],
-    },
-    patternLearning: {
-      repeatedPainPatterns: ['Manual intake signal needs structured follow-up'],
-      commonBlockers: ['Unclear owner', 'Incomplete source context'],
-      similarInitiatives: [],
-      recurringSystems: [],
-      reusableRequirementPatterns: ['Owner, workflow, source information, next action'],
-      solutionPathsChosen: [draft.primarySolutionPath],
-      successfulSolutionApproaches: ['Start with discovery before committing to a build path'],
-      failedOrDeferredApproaches: ['Treating raw input as a complete requirement'],
-      commonDiscoveryGaps: ['Current workflow boundary', 'Decision owner', 'Source reliability'],
-      dataReadinessIssues: ['Source information not yet validated'],
-      stakeholderOwnershipProblems: ['Owner should be confirmed before execution'],
-    },
-    decisionLensBehaviors: [
-      {
-        lens: 'Fastest Useful Output',
-        recommendationChanged: false,
-        currentRecommendedNextAction: draft.recommendedNextAction,
-        emphasisChanges: ['Focus on the smallest useful clarification step.'],
-        pathsAffected: [draft.primarySolutionPath],
-        newQuestionsToAsk: ['What would make this signal useful enough to act on next?'],
-        futureDirection: 'Use the first pass to decide whether this becomes a larger initiative.',
-      },
-      {
-        lens: 'Safer First Step',
-        recommendationChanged: false,
-        currentRecommendedNextAction: draft.recommendedNextAction,
-        emphasisChanges: ['Emphasize validation before solution commitment.'],
-        pathsAffected: [draft.primarySolutionPath],
-        newQuestionsToAsk: ['What assumptions could make the suggested path risky?'],
-        futureDirection: 'Defer build decisions until the problem and owner are clearer.',
-      },
-      {
-        lens: 'Operational Stability',
-        recommendationChanged: false,
-        currentRecommendedNextAction: draft.recommendedNextAction,
-        emphasisChanges: ['Prioritize ownership, workflow fit, and repeatability.'],
-        pathsAffected: [draft.primarySolutionPath],
-        newQuestionsToAsk: ['Who owns the workflow and what happens if nothing changes?'],
-        futureDirection: 'Convert the signal into an operating rhythm only after discovery.',
-      },
-    ],
-  }
-}
-
-function IntakePage({ onAddInitiative }: IntakePageProps) {
-  const [title, setTitle] = useState('')
-  const [department, setDepartment] = useState<Department>('Operations')
-  const [rawInput, setRawInput] = useState('')
-  const [tags, setTags] = useState('')
-  const [notes, setNotes] = useState('')
-  const [draft, setDraft] = useState<StructuredDraft | null>(null)
-  const [addedTitle, setAddedTitle] = useState<string | null>(null)
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const fallbackTitle = 'Untitled Intake Signal'
-    const nextDraft = inferDraftFromSignal({
-      department,
-      rawInput,
-      title: title.trim() || fallbackTitle,
-    })
-
-    setDraft(nextDraft)
-    setAddedTitle(null)
-  }
-
-  const handleAddToInitiatives = () => {
-    if (!draft) {
-      return
-    }
-
-    const initiative = createInitiativeFromDraft({
-      department,
-      draft,
-      notes,
-      rawInput,
-      tags,
-    })
-
-    onAddInitiative(initiative)
-    setAddedTitle(initiative.title)
-  }
-
-  return (
-    <section className="intake-page" aria-labelledby="intake-title">
-      <div className="list-page-header">
-        <div>
-          <p className="eyebrow">Intake</p>
-          <h3 id="intake-title">Structure a raw signal</h3>
-          <p>
-            Capture messy notes, ideas, or operational pain and shape them into a
-            draft initiative direction.
-          </p>
-        </div>
-        <div className="list-page-count">
-          <span>{departments.length}</span>
-          <p>Departments available</p>
-        </div>
-      </div>
-
-      <div className="intake-workspace">
-        <form className="intake-form" onSubmit={handleSubmit}>
-          <div className="section-heading">
-            <p className="eyebrow">Raw input</p>
-            <h3>Signal capture</h3>
-          </div>
-
-          <label>
-            <span>Title</span>
-            <input
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="Short title for the signal"
-              type="text"
-              value={title}
-            />
-          </label>
-
-          <label>
-            <span>Department</span>
-            <select
-              onChange={(event) => setDepartment(event.target.value as Department)}
-              value={department}
-            >
-              {departments.map((departmentOption) => (
-                <option key={departmentOption} value={departmentOption}>
-                  {departmentOption}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label>
-            <span>Raw Input / Signal</span>
-            <textarea
-              onChange={(event) => setRawInput(event.target.value)}
-              placeholder="Paste notes, describe the workflow issue, or capture the rough idea."
-              rows={8}
-              value={rawInput}
-            />
-          </label>
-
-          <label>
-            <span>Optional tags</span>
-            <input
-              onChange={(event) => setTags(event.target.value)}
-              placeholder="visibility, workflow, data, automation"
-              type="text"
-              value={tags}
-            />
-          </label>
-
-          <label>
-            <span>Optional notes</span>
-            <textarea
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="Any context, constraints, or open questions."
-              rows={4}
-              value={notes}
-            />
-          </label>
-
-          <button type="submit">Structure Signal</button>
-        </form>
-
-        <section className="intake-output" aria-live="polite">
-          <div className="section-heading">
-            <p className="eyebrow">Simulated structuring</p>
-            <h3>Draft output</h3>
-          </div>
-          <p className="simulation-note">
-            This is a simulated structuring step. In a full system, signals would
-            be analyzed and shaped into initiatives.
-          </p>
-
-          {draft ? (
-            <div className="draft-output-card">
-              <div>
-                <span>Draft Initiative Title</span>
-                <strong>{draft.title}</strong>
-              </div>
-              <div>
-                <span>Problem Summary</span>
-                <p>{draft.problemSummary}</p>
-              </div>
-              <div className="draft-output-grid">
-                <article>
-                  <span>Suggested Recommended Next Action</span>
-                  <strong>{draft.recommendedNextAction}</strong>
-                </article>
-                <article>
-                  <span>Suggested Primary Solution Path</span>
-                  <strong>{draft.primarySolutionPath}</strong>
-                </article>
-              </div>
-              <div>
-                <span>Example Supporting Solution Paths</span>
-                <div className="data-chip-row">
-                  {draft.supportingSolutionPaths.map((path) => (
-                    <span key={path}>{path}</span>
-                  ))}
-                </div>
-              </div>
-              <button onClick={handleAddToInitiatives} type="button">
-                Add to Initiatives
-              </button>
-              {addedTitle ? (
-                <p className="intake-confirmation">
-                  Added to local initiatives: {addedTitle}
-                </p>
-              ) : null}
-            </div>
-          ) : (
-            <div className="lens-empty-state">
-              <p>Submit a signal to generate a simulated structured output.</p>
-            </div>
-          )}
-        </section>
-      </div>
-    </section>
-  )
-}
-
-const countedPatternItems = (items: string[], limit = 6): CountItem[] =>
-  countBy(items)
-    .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label))
-    .slice(0, limit)
-
-const collectPatternLearning = (
-  initiativeItems: Initiative[],
-  selector: (initiative: Initiative) => string[],
-): CountItem[] =>
-  countedPatternItems(initiativeItems.flatMap((initiative) => selector(initiative)))
-
-function PatternCountList({ items }: { items: CountItem[] }) {
-  if (items.length === 0) {
-    return <p className="empty-inline">No patterns captured yet.</p>
-  }
-
-  return (
-    <div className="pattern-count-list">
+    <div className="count-list">
+      <h3>{title}</h3>
       {items.map((item) => (
-        <div className="pattern-count-row" key={item.label}>
+        <div className="count-item" key={item.label}>
           <span>{item.label}</span>
           <strong>{item.count}</strong>
         </div>
@@ -1407,376 +1293,88 @@ function PatternCountList({ items }: { items: CountItem[] }) {
   )
 }
 
-function PatternsPage({ initiativeItems }: PatternPageProps) {
-  const patternGroups = [
-    {
-      title: 'Repeated Pain Patterns',
-      items: collectPatternLearning(
-        initiativeItems,
-        (initiative) => initiative.patternLearning.repeatedPainPatterns,
-      ),
-    },
-    {
-      title: 'Common Blockers',
-      items: collectPatternLearning(
-        initiativeItems,
-        (initiative) => initiative.patternLearning.commonBlockers,
-      ),
-    },
-    {
-      title: 'Data Readiness Issues',
-      items: collectPatternLearning(
-        initiativeItems,
-        (initiative) => initiative.patternLearning.dataReadinessIssues,
-      ),
-    },
-    {
-      title: 'Recurring Systems',
-      items: collectPatternLearning(
-        initiativeItems,
-        (initiative) => initiative.patternLearning.recurringSystems,
-      ),
-    },
-    {
-      title: 'Similar Initiatives',
-      items: collectPatternLearning(
-        initiativeItems,
-        (initiative) => initiative.patternLearning.similarInitiatives,
-      ),
-    },
-    {
-      title: 'Reusable Requirement Patterns',
-      items: collectPatternLearning(
-        initiativeItems,
-        (initiative) => initiative.patternLearning.reusableRequirementPatterns,
-      ),
-    },
-  ]
-
+function DetailList({ title, items }: { title: string; items: string[] }) {
   return (
-    <section className="patterns-page" aria-labelledby="patterns-page-title">
-      <div className="list-page-header">
-        <div>
-          <p className="eyebrow">Patterns</p>
-          <h3 id="patterns-page-title">Cross-initiative intelligence</h3>
-          <p>
-            Patterns show where problems repeat across the organization. This
-            helps identify where standard solutions or playbooks should exist.
-          </p>
-        </div>
-        <div className="list-page-count">
-          <span>{initiativeItems.length}</span>
-          <p>Initiatives analyzed</p>
-        </div>
-      </div>
-
-      <div className="patterns-page-grid">
-        {patternGroups.map((group) => (
-          <article className="patterns-page-card" key={group.title}>
-            <h4>{group.title}</h4>
-            <PatternCountList items={group.items} />
-          </article>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-const includesAnyPattern = (initiativeItems: Initiative[], words: string[]): boolean =>
-  initiativeItems
-    .flatMap((initiative) => [
-      ...initiative.patternLearning.repeatedPainPatterns,
-      ...initiative.patternLearning.commonBlockers,
-      ...initiative.patternLearning.dataReadinessIssues,
-      ...initiative.patternLearning.reusableRequirementPatterns,
-    ])
-    .some((item) => words.some((word) => item.toLowerCase().includes(word)))
-
-const buildPlaybookCards = (initiativeItems: Initiative[]): PlaybookCard[] => {
-  const cards: PlaybookCard[] = []
-
-  if (includesAnyPattern(initiativeItems, ['visibility', 'status', 'report'])) {
-    cards.push({
-      title: 'Workflow Visibility Gaps',
-      whenToUse:
-        'Use when teams cannot see current status, blockers, owners, or upcoming operational obligations.',
-      recommendedFirstActions: ['Define Requirements', 'Create Reporting View'],
-      typicalSolutionPaths: ['Reporting / Visibility', 'Process Improvement'],
-      commonRisks: [
-        'Building a view before agreeing on required fields',
-        'Treating unclear ownership as a reporting-only issue',
-      ],
-    })
-  }
-
-  if (includesAnyPattern(initiativeItems, ['handoff', 'transition', 'owner'])) {
-    cards.push({
-      title: 'Handoff and Ownership Breakdowns',
-      whenToUse:
-        'Use when work crosses teams and accountability, acceptance criteria, or backup ownership is unclear.',
-      recommendedFirstActions: ['Map Workflow', 'Run Discovery'],
-      typicalSolutionPaths: ['Process Improvement', 'Knowledge / Memory Layer'],
-      commonRisks: [
-        'Automating unclear handoffs',
-        'Skipping the receiving team perspective',
-      ],
-    })
-  }
-
-  if (includesAnyPattern(initiativeItems, ['data', 'source', 'field', 'naming'])) {
-    cards.push({
-      title: 'Data Readiness First',
-      whenToUse:
-        'Use when source fields, status definitions, naming, or data ownership are not trusted enough for action.',
-      recommendedFirstActions: ['Validate Data', 'Define Requirements'],
-      typicalSolutionPaths: ['Reporting / Visibility', 'Workflow Automation'],
-      commonRisks: [
-        'Designing automation around unreliable inputs',
-        'Using inconsistent status language across teams',
-      ],
-    })
-  }
-
-  if (includesAnyPattern(initiativeItems, ['idea', 'intake', 'context'])) {
-    cards.push({
-      title: 'Structured Idea Intake',
-      whenToUse:
-        'Use when raw ideas, AI opportunities, or lightweight tool requests are arriving without a consistent review path.',
-      recommendedFirstActions: ['Run Discovery', 'Build Prototype'],
-      typicalSolutionPaths: ['Knowledge / Memory Layer', 'Lightweight Prototype'],
-      commonRisks: [
-        'Letting informal ideas become ungoverned pilots',
-        'Capturing submissions without a routing owner',
-      ],
-    })
-  }
-
-  return cards.length > 0
-    ? cards
-    : [
-        {
-          title: 'Discovery Before Solution Commitment',
-          whenToUse:
-            'Use when a raw operational signal needs shaping before choosing a solution path.',
-          recommendedFirstActions: ['Run Discovery', 'Map Workflow'],
-          typicalSolutionPaths: ['Process Improvement', 'Knowledge / Memory Layer'],
-          commonRisks: [
-            'Treating a signal as a complete requirement',
-            'Committing to a build path before ownership is clear',
-          ],
-        },
-      ]
-}
-
-function PlaybookPage({ initiativeItems }: PatternPageProps) {
-  const playbookCards = buildPlaybookCards(initiativeItems)
-
-  return (
-    <section className="playbook-page" aria-labelledby="playbook-page-title">
-      <div className="list-page-header">
-        <div>
-          <p className="eyebrow">Playbook</p>
-          <h3 id="playbook-page-title">Reusable action guidance</h3>
-          <p>
-            Playbooks provide repeatable approaches to common operational
-            problems.
-          </p>
-        </div>
-        <div className="list-page-count">
-          <span>{playbookCards.length}</span>
-          <p>Playbooks available</p>
-        </div>
-      </div>
-
-      <div className="playbook-grid">
-        {playbookCards.map((card) => (
-          <article className="playbook-card" key={card.title}>
-            <h4>{card.title}</h4>
-            <p>{card.whenToUse}</p>
-            <div className="playbook-card-section">
-              <strong>Recommended first actions</strong>
-              <div className="data-chip-row">
-                {card.recommendedFirstActions.map((action) => (
-                  <span key={action}>{action}</span>
-                ))}
-              </div>
-            </div>
-            <div className="playbook-card-section">
-              <strong>Typical solution paths</strong>
-              <div className="data-chip-row">
-                {card.typicalSolutionPaths.map((path) => (
-                  <span key={path}>{path}</span>
-                ))}
-              </div>
-            </div>
-            <div className="playbook-card-section">
-              <strong>Common risks</strong>
-              <SimpleList items={card.commonRisks} />
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
-  )
-}
-
-function PlaceholderSection({ activeSection }: { activeSection: SectionKey }) {
-  const activeContent = sectionContent[activeSection]
-  const previewInitiatives = initiatives.slice(0, 3)
-
-  return (
-    <section className="content-grid" aria-live="polite">
-      <article className="feature-panel">
-        <div className="panel-heading">
-          <p className="eyebrow">
-            {navItems.find((item) => item.key === activeSection)?.eyebrow}
-          </p>
-          <h3>{activeContent.title}</h3>
-        </div>
-        <p>{activeContent.summary}</p>
-
-        <div className="solution-strip">
-          <span>{wayfinderDataSummary.rawSignalCount} operational signals</span>
-          <span>{solutionPathOptions.length} solution paths</span>
-          <span>{recommendedNextActions.length} next actions</span>
-        </div>
-      </article>
-
-      <aside className="metric-panel">
-        <span>{activeContent.stat}</span>
-        <p>{activeContent.statLabel}</p>
-      </aside>
-
-      <article className="detail-panel">
-        <h3>Data Foundation</h3>
-        <ul>
-          {activeContent.points.map((point) => (
-            <li key={point}>{point}</li>
-          ))}
-        </ul>
-      </article>
-
-      <article className="recommendation-panel">
-        <p className="eyebrow">Mock initiative preview</p>
-        <h3>Local dataset loaded</h3>
-        <p>
-          The shell is lightly connected to typed mock data for later portfolio and
-          initiative pages.
-        </p>
-        <div className="initiative-preview-list">
-          {previewInitiatives.map((initiative) => (
-            <article className="initiative-preview" key={initiative.id}>
-              <div>
-                <strong>{initiative.title}</strong>
-                <span>{initiative.department}</span>
-              </div>
-              <p>
-                {initiative.primarySolutionPath} to {initiative.recommendedNextAction}
-              </p>
-            </article>
-          ))}
-        </div>
-        <div className="data-chip-row" aria-label="Dataset reference counts">
-          <span>{requirementCategories.length} requirement categories</span>
-          <span>{decisionLensPresets.length} decision lenses</span>
-        </div>
-      </article>
-    </section>
-  )
-}
-
-function App() {
-  const [activeSection, setActiveSection] = useState<SectionKey>('home')
-  const [localInitiatives, setLocalInitiatives] = useState<Initiative[]>([])
-  const [selectedInitiative, setSelectedInitiative] = useState<Initiative | null>(
-    null,
-  )
-  const initiativeItems = [...initiatives, ...localInitiatives]
-
-  const handleNavChange = (section: SectionKey) => {
-    setActiveSection(section)
-
-    if (section !== 'initiatives') {
-      setSelectedInitiative(null)
-    }
-  }
-
-  return (
-    <div className="app-shell">
-      <aside className="sidebar" aria-label="Primary navigation">
-        <div className="brand-lockup">
-          <div className="brand-mark" aria-hidden="true">
-            W
-          </div>
-          <div>
-            <p className="brand-kicker">Strategy intelligence</p>
-            <h1>Wayfinder</h1>
-          </div>
-        </div>
-
-        <nav className="primary-nav">
-          {navItems.map((item) => (
-            <button
-              className={item.key === activeSection ? 'nav-item active' : 'nav-item'}
-              key={item.key}
-              onClick={() => handleNavChange(item.key)}
-              type="button"
-            >
-              <span>{item.label}</span>
-              <small>{item.eyebrow}</small>
-            </button>
-          ))}
-        </nav>
-
-        <div className="sidebar-note">
-          <span className="note-dot" aria-hidden="true" />
-          <p>Local mock data only. Product screens and integrations come later.</p>
-        </div>
-      </aside>
-
-      <main className="workspace">
-        <header className="workspace-header">
-          <div>
-            <p className="eyebrow">Internal strategy system</p>
-            <h2>Turn scattered operational signals into recommended solution paths.</h2>
-            <p className="positioning">
-              Wayfinder helps product and operations leaders structure initiatives,
-              compare solution directions, and identify useful next actions.
-            </p>
-          </div>
-          <div className="header-panel" aria-label="Current focus">
-            <span>Core value</span>
-            <strong>Solution Mapping and Recommendation</strong>
-          </div>
-        </header>
-
-        {activeSection === 'home' ? (
-          <WayfinderHome />
-        ) : activeSection === 'initiatives' ? (
-          <InitiativesPage
-            initiativeItems={initiativeItems}
-            onBackToInitiatives={() => setSelectedInitiative(null)}
-            onSelectInitiative={setSelectedInitiative}
-            selectedInitiative={selectedInitiative}
-          />
-        ) : activeSection === 'intake' ? (
-          <IntakePage
-            onAddInitiative={(initiative) =>
-              setLocalInitiatives((currentInitiatives) => [
-                ...currentInitiatives,
-                initiative,
-              ])
-            }
-          />
-        ) : activeSection === 'patterns' ? (
-          <PatternsPage initiativeItems={initiativeItems} />
-        ) : activeSection === 'playbook' ? (
-          <PlaybookPage initiativeItems={initiativeItems} />
-        ) : (
-          <PlaceholderSection activeSection={activeSection} />
-        )}
-      </main>
+    <div className="detail-list">
+      <h3>{title}</h3>
+      <ul>
+        {items.length ? items.map((item) => <li key={item}>{item}</li>) : <li>None captured yet.</li>}
+      </ul>
     </div>
+  )
+}
+
+function RequirementsGrid({ requirements, compact = false }: { requirements: RequirementsByCategory; compact?: boolean }) {
+  return (
+    <div className={compact ? 'requirements-grid compact' : 'requirements-grid'}>
+      {requirementCategories.map((category) => {
+        const items = requirements[category] ?? []
+
+        if (compact && !items.length) {
+          return null
+        }
+
+        return (
+          <article className="requirement-card" key={category}>
+            <h3>{category.replace(' Requirements', '')}</h3>
+            {items.length ? (
+              <ul>
+                {items.map((item) => (
+                  <li key={item.id}>
+                    <strong>{item.requirement}</strong>
+                    <span>{item.rationale}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No candidate requirements yet.</p>
+            )}
+          </article>
+        )
+      })}
+    </div>
+  )
+}
+
+function FilterSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: string
+  options: readonly string[]
+  onChange: (value: string) => void
+}) {
+  return (
+    <label className="filter-field">
+      <span>{label}</span>
+      <select onChange={(event) => onChange(event.target.value)} value={value}>
+        {options.map((option) => (
+          <option key={option}>{option}</option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+function PatternCluster({ title, items }: { title: string; items: CountItem[] }) {
+  return (
+    <article className="pattern-cluster">
+      <div className="cluster-heading">
+        <h2>{title}</h2>
+        <span>{items.reduce((sum, item) => sum + item.count, 0)}</span>
+      </div>
+      <div className="cluster-items">
+        {items.map((item) => (
+          <div className="cluster-item" key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.count}</strong>
+          </div>
+        ))}
+      </div>
+    </article>
   )
 }
 

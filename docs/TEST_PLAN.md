@@ -7,19 +7,19 @@ This test plan covers manual checks for the Wayfinder prototype. The goal is to 
 ## Navigation
 
 Test:
-- Open each primary nav item: Home, Initiatives, Intake, Patterns, Playbook.
+- Open each primary nav item: Home, Initiative Queue, Add Signal, Pattern Intelligence, Recommendation Playbook.
 - Move between pages after selecting an initiative.
-- Return to Initiatives from the detail page.
+- Return to Initiative Queue from the detail page.
 
 Expected behavior:
 - Each nav item renders the correct page.
 - The active nav state updates.
-- Leaving Initiatives clears the selected initiative.
+- Leaving Initiative Queue clears the selected initiative.
 
 ## Initiative Selection
 
 Test:
-- Open Initiatives.
+- Open Initiative Queue.
 - Search by a known initiative title.
 - Filter by department.
 - Filter by recommended next action.
@@ -37,18 +37,18 @@ Expected behavior:
 Test:
 - Open each mock initiative from the list.
 - Confirm all detail sections render.
-- Check that Waypoint is not the first section.
+- Check that Recommended Path appears immediately after the compact initiative header.
 - Confirm solution paths show qualitative fit labels only.
 
 Expected behavior:
-- Header, context, signals, scoping, Waypoint, solution map, decision lens, requirements, future scope, and pattern learning all render.
+- Header, Recommended Path, rationale, decision priority, solution options, requirements, future scope, and pattern learning all render.
 - No numeric scoring appears.
 
-## Decision Lens Behavior
+## Decision Priority Behavior
 
 Test:
 - Open an initiative detail page.
-- Go to Decision Lens.
+- Go to Decision Priority.
 - Confirm the default message appears before selecting a lens.
 - Select enabled lenses.
 - Try disabled lenses if present.
@@ -67,14 +67,14 @@ Test:
 - Enter a title, department, raw signal, optional tags, and notes.
 - Select Structure Signal.
 - Review the simulated draft.
-- Select Add to Initiatives.
-- Go to Initiatives and search for the new item.
+- Select Add to Initiative Queue.
+- Go to Initiative Queue and search for the new item.
 - Open the new item detail page.
 
 Expected behavior:
 - A simulated structured output appears.
 - Suggested action and solution paths come from template logic.
-- Added initiatives appear in the Initiatives list during the current session.
+- Added initiatives appear in the Initiative Queue during the current session.
 - Added initiatives disappear after refresh.
 
 ## Patterns Page

@@ -11,8 +11,8 @@ Operational improvement work often starts as scattered notes, requests, pain poi
 - **Signal:** Raw input from notes, files, requests, pain points, workflow issues, dashboards, prototypes, or ideas.
 - **Initiative:** The central object being analyzed and shaped.
 - **Solution Path:** A possible route for solving the initiative, such as process improvement, reporting, automation, or prototyping.
-- **Waypoint:** The prominent recommendation section inside an initiative workspace.
-- **Decision Lens:** A perspective that changes emphasis, questions, or direction without forcing a recommendation change.
+- **Recommended Path:** The prominent recommendation section inside an initiative workspace.
+- **Decision Priority:** A perspective that changes emphasis, questions, or direction without forcing a recommendation change.
 
 ## What Is Included
 
@@ -47,9 +47,9 @@ Open the local URL shown by Vite.
 ## Feature Overview
 
 - **Home dashboard:** Strategic control surface for what needs attention, recommended actions, emerging patterns, and recent signals.
-- **Initiatives list:** Search and filter initiatives by department, recommended next action, and primary solution path.
+- **Initiative Queue:** Search and filter initiatives by department, recommended next action, and primary solution path.
 - **Initiative detail workspace:** Full structured view of context, inputs, scoping, recommendation, solution map, requirements, future scope, and pattern learning.
-- **Decision lenses:** Select a lens to see how emphasis, questions, and future direction change.
-- **Intake simulation:** Manually enter a raw signal and generate a simulated structured initiative draft.
-- **Patterns:** Aggregate repeated pain patterns, blockers, readiness issues, systems, similar initiatives, and reusable requirements.
-- **Playbooks:** Turn common patterns into repeatable guidance for action.
+- **Decision priorities:** Select a priority to see how emphasis, questions, and future direction change.
+- **Add Signal:** Manually enter a raw signal and generate a simulated structured initiative draft.
+- **Pattern Intelligence:** Aggregate repeated pain patterns, blockers, readiness issues, systems, similar initiatives, and reusable requirements.
+- **Recommendation Playbook:** Turn common patterns into repeatable guidance for action.

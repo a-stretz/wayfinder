@@ -31,16 +31,16 @@ The Initiative Detail page is the main workspace.
 - **Context Summary:** Explains the situation behind the initiative.
 - **Inputs and Signals:** Shows the raw inputs that led to the initiative.
 - **Scoping Analysis:** Frames the work before committing to a solution.
-- **Waypoint:** Shows the recommended next action and primary solution path.
-- **Solution Map:** Compares possible solution paths using qualitative fit labels.
+- **Recommended Path:** Shows the recommended next action and primary solution path.
+- **Solution Options:** Compares possible solution paths using qualitative fit labels.
 - **Candidate Requirements Map:** Groups possible requirements by category.
 - **Requirements by Solution Path:** Shows how requirements change by path.
 - **Target State and Future Scope:** Defines the intended future state and deferred work.
 - **Pattern Learning:** Captures reusable learning from the initiative.
 
-## Decision Lens
+## Decision Priority
 
-Use Decision Lens inside the detail workspace to test emphasis.
+Use Decision Priority inside the detail workspace to test emphasis.
 
 - Select one lens at a time.
 - Review whether the recommendation changes.
@@ -82,8 +82,8 @@ Use Playbook to translate repeated patterns into action guidance.
 
 1. Start at Home and explain the control surface.
 2. Open Initiatives and select an initiative.
-3. Walk through the detail workspace from context to Waypoint.
-4. Apply a Decision Lens and show how emphasis changes.
+3. Walk through the detail workspace from context to Recommended Path.
+4. Apply a Decision Priority and show how emphasis changes.
 5. Go to Intake and structure a new raw signal.
 6. Add the draft to Initiatives.
 7. Return to Patterns or Playbook to explain how repeated signals become reusable guidance.
