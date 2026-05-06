@@ -349,9 +349,72 @@ function NextActionsSummary() {
   )
 }
 
+function WayfinderHero() {
+  const beforeAfter = [
+    {
+      before: '"Can we build a dashboard for debt covenants?"',
+      action: 'Map Workflow first',
+      reason:
+        'Owners, escalation rules, and source documents are unclear. The dashboard becomes useful after Step 2.',
+    },
+    {
+      before: '"Let\u2019s use AI to extract lease terms."',
+      action: 'Assess AI Fit',
+      reason:
+        'Source-linking and legal review are required before this touches a tenant-facing workflow.',
+    },
+    {
+      before: '"I built a spreadsheet for billing variances."',
+      action: 'Build Prototype',
+      reason:
+        'Workflow is narrow, data is structured, scope is reversible. This is the right build moment.',
+    },
+  ]
+
+  return (
+    <section className="wayfinder-hero" aria-labelledby="hero-title">
+      <p className="hero-eyebrow">Decision-support layer for internal initiatives</p>
+      <h2 id="hero-title" className="hero-headline">
+        Wayfinder turns scattered internal demand into structured decisions —
+        so leaders move faster without losing control.
+      </h2>
+
+      <div className="hero-split" aria-label="Before and after Wayfinder">
+        <div className="hero-split-header hero-split-header-before">
+          What teams send leadership today
+        </div>
+        <div className="hero-split-header hero-split-header-after">
+          What Wayfinder produces
+        </div>
+        {beforeAfter.map((row, i) => (
+          <div className="hero-split-row" key={i}>
+            <div className="hero-before">{row.before}</div>
+            <div className="hero-after">
+              <strong>{row.action}.</strong> {row.reason}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <article className="hero-waypoint" aria-label="Hero recommendation">
+        <p className="hero-waypoint-eyebrow">Recommended next action</p>
+        <h3 className="hero-waypoint-action">Map Workflow</h3>
+        <p className="hero-waypoint-initiative">
+          Initiative: Debt Obligation and Deadline Visibility
+        </p>
+        <p className="hero-waypoint-reason">
+          Ownership and handoffs are unclear. Reporting and automation become safer
+          after the operational workflow is visible.
+        </p>
+      </article>
+    </section>
+  )
+}
+
 function WayfinderHome() {
   return (
     <section className="home-dashboard" aria-label="Wayfinder Home dashboard">
+      <WayfinderHero />
       <PriorityRecommendations />
       <InitiativeOverview />
       <EmergingPatterns />
