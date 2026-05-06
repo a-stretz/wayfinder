@@ -1626,3 +1626,152 @@
     border-bottom: 0;
   }
 }
+/* ============================================
+   Wayfinder Hero — panel demo lead-in
+   ============================================ */
+.wayfinder-hero {
+  grid-column: 1 / -1;
+  background: linear-gradient(
+      135deg,
+      rgba(238, 137, 34, 0.06),
+      transparent 55%
+    ),
+    #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 36px 40px 32px;
+  display: grid;
+  gap: 24px;
+}
+
+.hero-eyebrow {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.hero-headline {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 1.85rem;
+  line-height: 1.18;
+  font-weight: 700;
+  max-width: 60ch;
+}
+
+.hero-split {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.hero-split-header {
+  padding: 12px 18px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.hero-split-header-before {
+  background: var(--text);
+}
+
+.hero-split-header-after {
+  background: var(--nav);
+}
+
+.hero-split-row {
+  display: contents;
+}
+
+.hero-split-row > div {
+  padding: 16px 18px;
+  border-top: 1px solid var(--border);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.hero-before {
+  background: rgba(157, 166, 186, 0.08);
+  color: var(--text);
+  font-style: italic;
+}
+
+.hero-after {
+  background: #fff;
+  color: var(--text-strong);
+}
+
+.hero-after strong {
+  color: var(--accent);
+  font-weight: 750;
+}
+
+.hero-waypoint {
+  border-left: 4px solid var(--accent);
+  background: var(--nav);
+  color: #fff;
+  padding: 22px 26px;
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.hero-waypoint-eyebrow {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.hero-waypoint-action {
+  margin: 4px 0 2px;
+  color: #fff;
+  font-size: 1.85rem;
+  line-height: 1.1;
+  font-weight: 750;
+}
+
+.hero-waypoint-initiative {
+  margin: 0;
+  color: var(--nav-muted);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.hero-waypoint-reason {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  max-width: 70ch;
+}
+
+@media (max-width: 720px) {
+  .wayfinder-hero {
+    padding: 24px 20px;
+  }
+  .hero-headline {
+    font-size: 1.4rem;
+  }
+  .hero-split {
+    grid-template-columns: 1fr;
+  }
+  .hero-split-header-after {
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+  }
+  .hero-waypoint-action {
+    font-size: 1.45rem;
+  }
+}
