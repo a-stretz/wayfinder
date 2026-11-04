@@ -48,6 +48,7 @@ The central workspace.
 - **Direction:** target state (editable, with history); future scope (later capabilities, deferred requirements, dependencies, not recommended yet, revisit triggers)
 - **Learning:** pattern contributions, related initiatives, outcome
 - **Collaboration:** comments, activity history
+- **Optional triage attributes** (all qualitative): business impact, urgency, feasibility, data readiness, AI maturity required (the level of organisational AI readiness the likely solution would need), risk if ungoverned, governance flags, and an **evidence label** saying how well-founded the initiative's framing is (Observed / Inferred / Hypothesized / Unknown)
 
 ### Waypoint
 Next action, why, expected output, decision enabled, what would change it. Every version records who or what produced it (a person, the system, a rule) and whether a person accepted or overrode it, and why.

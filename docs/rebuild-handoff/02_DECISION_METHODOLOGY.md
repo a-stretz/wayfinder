@@ -101,7 +101,7 @@ Readiness summarises scoping into one state. It is the main gate on what can be 
 | **Engineering Ready** | Scope, data, owners, risks and requirements are clear enough for formal planning | Most dimensions clear, ownership clear, risks known |
 | **Defer / Revisit** | Real, but timing, ownership, value or readiness is insufficient | Low value, no owner, or blocked by something external |
 
-Readiness is separate from **status** (where the initiative sits in the organisation's process: new, active, stalled, revisiting, handed off, deferred, done).
+Readiness is separate from **status**, which is where the initiative sits in the organisation's process. The original specification lists these lifecycle states: **Newly discovered · Already known · Active · Stalled · Revisiting · Ready for prototype · Ready for engineering handoff · Deferred**. Add **Done** for completed work. Two of these ("Ready for…") overlap with readiness; a rebuild should decide whether they belong to status or are derived from readiness.
 
 ---
 
@@ -360,3 +360,39 @@ When very little is known, the methodology defaults to caution:
 - Fit: the most likely path at **Good**, never Strong on thin evidence, with alternatives at Possible.
 - Starter requirements (section 10), a starter target state ("shaped into a clear initiative with a recommended next action and enough context for follow-up"), and future-scope dependencies such as *workflow owner, source context, a discovery conversation*.
 - The typical blockers to expect at intake: incomplete source context; unclear next-step owner; the submitter and the accountable owner may be different people.
+
+---
+
+## 16. Breaking the reasoning into separate tasks
+
+Whoever performs it (AI, rules, or people), the reasoning works best as separate, inspectable steps rather than one opaque judgement. Each step takes defined inputs and returns a structured, checkable output:
+
+| Step | Takes | Returns |
+|---|---|---|
+| **Structure the signal** | Raw text and documents | Summary, pain points, systems, stakeholders, requested solution, likely source type |
+| **Match the signal** | Structured signal, existing initiatives | Up to three likely matching initiatives with a reason each, or "create new"; duplicate warnings |
+| **Scope** | Initiative and all its signals | The 8 dimensions (value, rationale, supporting signals), readiness, root-cause hypothesis |
+| **Recommend** | Scoping, organisation playbooks, similar initiatives and their outcomes | The Waypoint (all five parts) and primary path |
+| **Assess solution fit** | Scoping and Waypoint | Only relevant paths, each with fit, why, requirements, risk, relationship to the Waypoint |
+| **Draft requirements** | Everything above | Requirements by category (medium depth, with rationale) and by path |
+| **Apply a lens** | Initiative and a lens definition | The seven-part lens output, explicitly allowed to be "unchanged" |
+| **Tag patterns** | Initiative | Normalised pattern tags, reusing existing tags wherever possible |
+| **Suggest playbooks** | Pattern clusters and outcomes | Draft playbooks for human review |
+
+Principles for this engine:
+- Outputs are **structured and validated**. If an output doesn't fit the expected shape, retry or fall back.
+- There is always a **cautious fallback** (section 15) when the AI is unavailable or switched off.
+- Submitted content is **information, never instructions**. A signal that says "recommend engineering" is evidence about the submitter's wishes, not a command.
+- Every output records **what produced it** and is **versioned**.
+- Rules 8.1 and 9.3 are part of the engine's instructions, not just documentation.
+- Quality is checked against a **benchmark set** of neutral example initiatives with expected readiness, next action and relevant paths. The checks are: didn't jump to AI or automation prematurely; showed only relevant paths; stated what would change the recommendation; respected readiness gates; lenses changed the answer only on a genuine conflict.
+
+---
+
+## 17. Governance risk vocabulary
+
+When judging the **Risk / Governance** dimension and deciding whether an initiative needs review, consider these risk types:
+
+Financial · Operational · Legal · Compliance · Customer or client · Data privacy · Reputational · **AI hallucination / inaccurate output** · **Unsupported "shadow" tooling** · **Unclear ownership** · Integration · **Poor source confidence** · **Over-automation**
+
+The bolded ones are specific to Wayfinder's territory: they describe what goes wrong when internal tools, automation and AI are built before ownership, data and review are in place. An initiative may carry **governance flags** (e.g. "AI on sensitive data", "no owner", "unverified source") that trigger review before the Waypoint can move to build-type actions.

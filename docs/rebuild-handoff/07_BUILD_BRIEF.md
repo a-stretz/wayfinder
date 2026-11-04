@@ -1,10 +1,10 @@
-# 06: Build Brief
+# 07: Build Brief
 
-Paste the text below into a new build session, together with documents 01–05. It assumes a **fresh build**: no prior code is provided or needed.
+Paste the text below into a new build session, together with documents 01–06. It assumes a **fresh build**: no prior code is provided or needed.
 
 ```text
 You are building "Wayfinder" from scratch as a market-ready, industry-neutral, multi-organisation product.
-No existing code is provided. Your inputs are five concept documents:
+No existing code is provided. Your inputs are six concept documents:
 
   01_CONCEPT_AND_THESIS     – problem, thesis, positioning, principles, vocabulary
   02_DECISION_METHODOLOGY   – the core reasoning: signal → initiative → scoping → readiness →
@@ -12,7 +12,10 @@ No existing code is provided. Your inputs are five concept documents:
                               target state / future scope, patterns, playbooks, outcomes
   03_INFORMATION_MODEL      – the concepts and relationships the product must hold
   04_EXPERIENCE_DESIGN      – information architecture, workspace layout, interaction patterns, visual tone
-  05_PRODUCT_DIRECTION      – lessons learned, what market-ready means, phases, open decisions
+  05_PRODUCT_DIRECTION      – lessons learned, what market-ready means, phases, open decisions,
+                              extensibility, demo narrative
+  06_ORGANISATION_ADAPTATION – evidence-labelled method for fitting Wayfinder to one organisation
+                              (basis for guided onboarding)
 
 Treat 02 as the product's intellectual core. The reasoning engine must follow its rules,
 especially:

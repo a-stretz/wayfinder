@@ -79,3 +79,42 @@ Decide these deliberately rather than by default:
 6. **Primary buyer:** product-operations leaders, transformation or operations offices, or owners of internal AI and automation programmes.
 7. **Pricing basis:** seats, usage, or a mix.
 8. **Organisation onboarding depth:** a light setup form, or a guided "context interview" that drafts the organisation's vocabulary and focus areas for confirmation.
+
+## 6. Extensibility to anticipate from day one
+
+The original specification insists Wayfinder is a real product foundation, not a throwaway demo. Even the first version should leave room for:
+
+- AI provider configuration and the customer's own API keys
+- Connectors to external tools, including the Model Context Protocol (MCP) in both directions (Wayfinder consuming tools, and other agents using Wayfinder)
+- File ingestion, document parsing, bulk import, email and meeting-note ingestion
+- Initiative de-duplication and similar-initiative detection
+- **Skill files**: reusable, versioned analysis guidance that tunes how the reasoning works
+- Versioning of the instructions given to the AI
+- Evaluation and feedback loops; recommendation quality tracking; user feedback on usefulness
+- Training or fine-tuning datasets built from accepted, overridden and outcome-verified recommendations (with consent)
+- Outcome tracking from completed initiatives
+- Exportable initiative briefs
+- A resettable demo workspace, and honest labelling of what is automated versus simulated or suggested
+
+## 7. Demo narrative
+
+**Premise:** an organisation is overwhelmed by solution-first internal requests and wants clarity on what to do next.
+
+**Flow:**
+1. **Home.** Position it as the strategic control surface. Point to recommended moves, emerging patterns, latest signals, and the next-action mix. Use the "raw request → Wayfinder output" explainer.
+2. **Patterns.** Show that repeated friction is visible across teams and suggests where standard approaches are needed.
+3. **Open an initiative.** Search or filter briefly, then open the full workspace.
+4. **Walk the workspace.** Problem and context → signals → scoping → pause on the **Waypoint** → solution options and requirements.
+5. **Apply a lens.** Show whether the recommendation changes. If it doesn't, stress that the lens changed the focus, the questions and the future direction.
+6. **Add a signal.** Turn a raw input into a structured draft and add it to the initiatives.
+7. **Return to patterns or playbooks.** Explain how repeated signals become reusable guidance.
+
+**Talking points:**
+- Wayfinder is not a task tracker; its core value is **recommendation clarity**.
+- The flow is **Signal → Initiative → Solution Path → Action**.
+- The Waypoint makes the next action visible without making it premature.
+- Lenses let leaders test their priorities without numeric scoring.
+- Patterns and playbooks turn repeated friction into reusable guidance.
+- The system gets smarter with every signal, decision and outcome.
+
+**What to avoid:** overstating what is automated; framing it as task management; using any organisation's sensitive or identifying information.

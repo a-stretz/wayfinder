@@ -13,7 +13,10 @@ The intent is that a team, or an AI build session, could build Wayfinder from sc
 | 03 | [Information Model](03_INFORMATION_MODEL.md) | The concepts the product reasons about and how they relate, in plain language |
 | 04 | [Experience Design](04_EXPERIENCE_DESIGN.md) | Information architecture, the initiative workspace, signature interaction patterns, visual tone |
 | 05 | [Product Direction](05_PRODUCT_DIRECTION.md) | Lessons from the prototype, what "market ready" means, phased direction, open decisions |
-| 06 | [Build Brief](06_BUILD_BRIEF.md) | A paste-in brief for starting a fresh build from these ideas |
+| 06 | [Organisation Adaptation](06_ORGANISATION_ADAPTATION.md) | The evidence-labelled method for fitting Wayfinder to one organisation; basis for guided onboarding |
+| 07 | [Build Brief](07_BUILD_BRIEF.md) | A paste-in brief for starting a fresh build from these ideas |
+
+**Single-file version:** [WAYFINDER_CONTEXT.md](WAYFINDER_CONTEXT.md) holds everything above in one document, for handing to another session.
 
 ## Wayfinder in one paragraph
 
