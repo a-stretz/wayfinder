@@ -1,47 +1,20 @@
-# Wayfinder Rebuild Handoff Package
+# Wayfinder: Concept and Methodology Handoff
 
-This folder is a complete, domain-neutral breakdown of the Wayfinder prototype. Its job is to give a rebuilding session everything it needs to turn the prototype into a market-ready product.
+This package holds the **ideas behind Wayfinder**: the product thesis, the decision methodology, the information model, the experience design, and the product direction. It contains **no code** and no implementation details, and it doesn't depend on how the original prototype was built. It also leaves out all sample data and anything specific to one industry or company.
 
-**Scope rule for this package:** it describes what was built, how it works, where it falls short, and what a market-ready version needs. It deliberately leaves out the prototype's synthetic dataset, its industry-specific examples and vocabulary, and the per-company adaptation material. Where the prototype hardcodes domain content, this package describes the *shape* of that content and marks it as something to replace with tenant-configurable data.
+The intent is that a team, or an AI build session, could build Wayfinder from scratch in any technology using only these documents.
 
-## Reading order
+## Contents
 
-| # | File | What it gives you |
+| # | Document | What it captures |
 |---|---|---|
-| 01 | [01_PRODUCT_OVERVIEW.md](01_PRODUCT_OVERVIEW.md) | Thesis, positioning, users, goals, non-goals, vocabulary, success criteria |
-| 02 | [02_DOMAIN_MODEL.md](02_DOMAIN_MODEL.md) | Every entity, enum, field and relationship, as built and as specified, plus a proposed target schema |
-| 03 | [03_FEATURES_AND_SCREENS.md](03_FEATURES_AND_SCREENS.md) | Screen-by-screen breakdown of the shipped UI: layout, content, interactions, states |
-| 04 | [04_LOGIC_AND_ALGORITHMS.md](04_LOGIC_AND_ALGORITHMS.md) | All application logic: state, derivations, intake heuristic, aggregation, lens behaviour, defaults |
-| 05 | [05_DESIGN_SYSTEM.md](05_DESIGN_SYSTEM.md) | Colour, type, spacing, components, status treatments, responsive rules, tone |
-| 06 | [06_GAP_ANALYSIS.md](06_GAP_ANALYSIS.md) | Spec-vs-built matrix, confirmed bugs, tech debt, documentation drift |
-| 07 | [07_MARKET_READY_REQUIREMENTS.md](07_MARKET_READY_REQUIREMENTS.md) | Target architecture, functional and non-functional requirements, phased roadmap with acceptance criteria |
-| 08 | [08_REBUILD_SESSION_PROMPT.md](08_REBUILD_SESSION_PROMPT.md) | A ready-to-paste prompt for kicking off the rebuild session |
+| 01 | [Concept and Thesis](01_CONCEPT_AND_THESIS.md) | The problem, the insight, positioning, principles, vocabulary |
+| 02 | [Decision Methodology](02_DECISION_METHODOLOGY.md) | **The core IP.** How a raw signal becomes a recommended next action: scoping, readiness, solution paths, fit, the Waypoint, lenses, requirements, future scope, pattern learning, playbooks |
+| 03 | [Information Model](03_INFORMATION_MODEL.md) | The concepts the product reasons about and how they relate, in plain language |
+| 04 | [Experience Design](04_EXPERIENCE_DESIGN.md) | Information architecture, the initiative workspace, signature interaction patterns, visual tone |
+| 05 | [Product Direction](05_PRODUCT_DIRECTION.md) | Lessons from the prototype, what "market ready" means, phased direction, open decisions |
+| 06 | [Build Brief](06_BUILD_BRIEF.md) | A paste-in brief for starting a fresh build from these ideas |
 
-## One-paragraph summary
+## Wayfinder in one paragraph
 
-Wayfinder is a decision-support tool for internal improvement work. It takes raw "signals" (requests, complaints, notes, ideas), shapes them into "initiatives", assesses each initiative qualitatively, compares possible solution paths using fit labels instead of numeric scores, recommends a concrete next action, lets the user test how different decision priorities ("lenses") would shift emphasis, maps candidate requirements, keeps a target state and future scope visible, and aggregates patterns across all initiatives. The prototype is a single-page React 19 + TypeScript + Vite app with no backend, no persistence, no auth, and no real AI. Its "intelligence" is either hand-authored seed data or a keyword heuristic. At the time of this analysis **the production build fails** on a type error (see 06).
-
-## Prototype facts at a glance
-
-| Item | Value |
-|---|---|
-| Stack | React 19.2, TypeScript ~6.0, Vite 8, ESLint 10 flat config |
-| Runtime deps | `react`, `react-dom` only |
-| Source size | `src/App.tsx` 1,381 lines (all components in one file), `src/App.css` 1,911 lines, `src/data/wayfinderData.ts` 882 lines (types + seed data) |
-| Routing | None. One `activePage` state value plus a `selectedInitiativeId` |
-| State | React `useState` in the root `App` component. Lost on refresh |
-| Persistence / backend / auth | None |
-| AI | None. Intake uses substring keyword matching |
-| Tests | None (manual test plan only) |
-| Build status | `npm run lint` passes. `npm run build` **fails**: `src/App.tsx(105,3): Type 'string' is not assignable to type 'SignalSource'` |
-| Deployment config | None in repo (no `netlify.toml`, no CI workflow) |
-| Leftovers | Default Vite favicon, unused Vite `public/icons.svg`, dead CSS classes, unused data export |
-
-## Source files the rebuild session should still read
-
-The handoff docs are self-contained, but these repo files are the primary sources:
-
-- `Wayfinder Core Spec.md`: the canonical product spec. Its concepts are generic, but its examples (sections 19, 24, 25) and suggested department names are industry-flavoured; ignore those parts.
-- `src/data/wayfinderData.ts`, lines 1–195: the type system and enums. Lines 197 onward are synthetic seed data and are out of scope.
-- `src/App.tsx`: all UI and logic.
-- `Wayfinder Deep Research Prompt.txt` and `Wayfinder Adaptation Prompt.txt`: prompts for adapting the product to one specific company. They are out of scope for a generic product, but they hint at a future "tenant onboarding / configuration" feature (see 07, section 4.9).
+Organisations receive a constant stream of internal improvement requests, and most of them arrive phrased as solutions: "build a dashboard", "use AI for this", "automate that". Wayfinder treats each request as a *signal*, gathers related signals into an *initiative*, judges how well the problem is understood and how ready it is for action, compares the realistic ways to solve it using plain-language fit judgements in place of scores, and commits to **one recommended next step**, explaining why and naming what would change its mind. Decision-makers can view the recommendation through different priorities (speed, risk, cost, visibility, AI opportunity, and so on) and see whether, and how, the advice shifts. Every initiative feeds a shared memory of recurring problems and proven approaches, so the organisation gets better at choosing what to do next.
